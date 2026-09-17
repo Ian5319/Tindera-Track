@@ -1,0 +1,13 @@
+.dart_tool/
+.packages
+.pub-cache/
+build/
+coverage/
+.idea/
+.vscode/
+*.iml
+pubspec.lock
+android/.gradle/
+android/app/debug/
+android/app/profile/
+android/app/release/

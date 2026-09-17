@@ -1,0 +1,33 @@
+# TinderaTrack MVP Testing Checklist
+
+- [ ] App launches without crashing
+- [ ] Login screen renders correctly
+- [ ] Login validation works for empty/invalid credentials
+- [ ] Create Account screen renders correctly
+- [ ] Password requirement errors display
+- [ ] Home dashboard displays mock data
+- [ ] Bottom navigation switches between Home / Inventory / Utang / Reports
+- [ ] Inventory list displays products and stock counts
+- [ ] Inventory search filters products
+- [ ] Low-stock products are visually highlighted
+- [ ] Add Item opens from + button
+- [ ] Camera viewfinder renders when camera is available
+- [ ] Gallery fallback works when a camera is unavailable
+- [ ] Product fields appear after photo capture
+- [ ] Add Item validates name, price, stock, and threshold
+- [ ] New item appears in Inventory after save
+- [ ] Existing item can be opened/edited
+- [ ] Utang screen loads customer list
+- [ ] Record Utang customer selector works
+- [ ] Balance preview updates while amount is typed
+- [ ] Photo attachment works
+- [ ] Utang sale saves to Hive
+- [ ] Customer balance increases after credit
+- [ ] Customer history shows + charges
+- [ ] Record Payment validates amount
+- [ ] Customer balance decreases after payment
+- [ ] Customer history shows - payments
+- [ ] Reports Daily/Weekly toggle works
+- [ ] Bar chart renders on both modes
+- [ ] All primary buttons are at least 48 px high
+- [ ] Test on small and large Android emulator sizes

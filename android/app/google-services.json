@@ -1,0 +1,46 @@
+{
+  "project_info": {
+    "project_number": "414011992436",
+    "project_id": "tinderatrack-acf1a",
+    "storage_bucket": "tinderatrack-acf1a.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:414011992436:android:1bce0c22bf982744e2e421",
+        "android_client_info": {
+          "package_name": "com.tinderatrack.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "414011992436-kjbv6u7dll6cqc4r3appj2k1qfe3n0o0.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDqN755ujP9YuQxtU7_udQcLvW3riM2jeI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "414011992436-kjbv6u7dll6cqc4r3appj2k1qfe3n0o0.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "414011992436-cf87diusenqhsh5jgu6d39i7qaj8huk8.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.tinderatrack."
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
