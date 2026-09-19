@@ -8,6 +8,7 @@ import 'presentation/providers/auth_provider.dart';
 import 'presentation/providers/inventory_provider.dart';
 import 'presentation/providers/utang_provider.dart';
 import 'presentation/routes/app_router.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class TinderaTrackApp extends StatelessWidget {
   const TinderaTrackApp({super.key});

@@ -16,6 +16,21 @@ allprojects {
     }
 }
 
-tasks.register('clean', Delete) {
-    delete rootProject.buildDir
+// Put Flutter/Gradle build output in the project's root build folder.
+def newBuildDir = rootProject.layout.buildDirectory
+        .dir("../../build")
+        .get()
+
+rootProject.layout.buildDirectory.set(newBuildDir)
+
+subprojects {
+    project.layout.buildDirectory.set(newBuildDir.dir(project.name))
+}
+
+subprojects {
+    project.evaluationDependsOn(":app")
+}
+
+tasks.register("clean", Delete) {
+    delete rootProject.layout.buildDirectory
 }
