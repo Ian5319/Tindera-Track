@@ -30,11 +30,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
       const Text('Top-Selling Products', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
       const SizedBox(height: 10),
       ...const [
-        ('Lucky Me! Pancit Canton', 86, '₱1,548'),
-        ('Coca-Cola 1.5L', 62, '₱4,836'),
-        ('Nescafé Classic 25g', 54, '₱2,268'),
-        ('SkyFlakes Crackers', 49, '₱490'),
-        ('Safeguard Soap', 37, '₱962'),
+        
       ].map((item) => Card(child: ListTile(leading: CircleAvatar(backgroundColor: AppColors.accent.withValues(alpha: .25), child: Text(item.$2.toString())), title: Text(item.$1, style: const TextStyle(fontWeight: FontWeight.w700)), trailing: Text(item.$3, style: const TextStyle(fontWeight: FontWeight.w800))))),
     ]);
   }

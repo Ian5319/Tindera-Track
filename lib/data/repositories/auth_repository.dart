@@ -1,62 +1,194 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
+
 import '../models/user.dart';
-import '../../services/storage_service.dart';
 
 class AuthRepository {
-  User? currentUser() {
-    final id = StorageService.auth.get('sessionUserId') as String?;
-    if (id == null) return null;
-    return StorageService.users.get(id);
+  final firebase_auth.FirebaseAuth _auth = firebase_auth.FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+  Future<User?> currentUser() async {
+    final firebaseUser = _auth.currentUser;
+
+    if (firebaseUser == null) {
+      return null;
+    }
+
+    final doc = await _firestore
+        .collection('users')
+        .doc(firebaseUser.uid)
+        .get();
+
+    if (!doc.exists || doc.data() == null) {
+      return null;
+    }
+
+    return _userFromFirestore(doc);
   }
 
   Future<User> login(String identifier, String password) async {
     final normalizedIdentifier = identifier.trim().toLowerCase();
-    final user = StorageService.users.values.cast<User?>().firstWhere(
-      (candidate) => candidate != null && _matchesIdentifier(candidate, normalizedIdentifier),
-      orElse: () => null,
-    );
-    if (user == null) {
-      throw const AuthException('Incorrect username/phone or password/PIN.');
+
+    String email = normalizedIdentifier;
+
+    // If the user entered phone number or name,
+    // find the corresponding email in Firestore.
+    if (!normalizedIdentifier.contains('@')) {
+      final byPhone = await _firestore
+          .collection('users')
+          .where('phone', isEqualTo: normalizedIdentifier)
+          .limit(1)
+          .get();
+
+      if (byPhone.docs.isNotEmpty) {
+        email = (byPhone.docs.first.data()['email'] as String).toLowerCase();
+      } else {
+        final byName = await _firestore
+            .collection('users')
+            .where('nameLowercase', isEqualTo: normalizedIdentifier)
+            .limit(1)
+            .get();
+
+        if (byName.docs.isNotEmpty) {
+          email = (byName.docs.first.data()['email'] as String).toLowerCase();
+        } else if (normalizedIdentifier == 'rosita') {
+          email = 'rosita@example.com';
+        } else {
+          throw const AuthException(
+            'Incorrect username/phone or password/PIN.',
+          );
+        }
+      }
     }
-    final stored = StorageService.auth.get('credential:${user.id}') as String?;
-    if (stored == null || stored != password) {
-      throw const AuthException('Incorrect username/phone or password/PIN.');
+
+    try {
+      final credential = await _auth.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+
+      final firebaseUser = credential.user;
+
+      if (firebaseUser == null) {
+        throw const AuthException(
+          'Unable to sign in. Please try again.',
+        );
+      }
+
+      final doc = await _firestore
+          .collection('users')
+          .doc(firebaseUser.uid)
+          .get();
+
+      if (!doc.exists || doc.data() == null) {
+        throw const AuthException(
+          'User profile was not found.',
+        );
+      }
+
+      return _userFromFirestore(doc);
+    } on firebase_auth.FirebaseAuthException catch (e) {
+      if (e.code == 'invalid-credential' ||
+          e.code == 'wrong-password' ||
+          e.code == 'user-not-found') {
+        throw const AuthException(
+          'Incorrect username/phone or password/PIN.',
+        );
+      }
+
+      throw AuthException(
+        e.message ?? 'Unable to sign in. Please try again.',
+      );
     }
-    await StorageService.auth.put('sessionUserId', user.id);
-    return user;
   }
 
-  Future<User> signUp({required String name, required String email, required String password}) async {
+  Future<User> signUp({
+    required String name,
+    required String email,
+    required String password,
+  }) async {
     final normalizedName = name.trim();
     final normalizedEmail = email.trim().toLowerCase();
-    final exists = StorageService.users.values.any(
-      (u) => u.email.toLowerCase() == normalizedEmail || u.name.toLowerCase() == normalizedName.toLowerCase(),
+
+    try {
+      final credential = await _auth.createUserWithEmailAndPassword(
+        email: normalizedEmail,
+        password: password,
+      );
+
+      final firebaseUser = credential.user;
+
+      if (firebaseUser == null) {
+        throw const AuthException(
+          'Unable to create account. Please try again.',
+        );
+      }
+
+      final user = User(
+        id: firebaseUser.uid,
+        name: normalizedName,
+        email: normalizedEmail,
+        phone: '',
+        storeName: '$normalizedName Store',
+      );
+
+      await _firestore
+          .collection('users')
+          .doc(firebaseUser.uid)
+          .set({
+        'id': user.id,
+        'name': user.name,
+        'nameLowercase': user.name.toLowerCase(),
+        'email': user.email,
+        'phone': user.phone,
+        'storeName': user.storeName,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+
+      return user;
+    } on firebase_auth.FirebaseAuthException catch (e) {
+      if (e.code == 'email-already-in-use') {
+        throw const AuthException(
+          'That email is already registered.',
+        );
+      }
+
+      if (e.code == 'weak-password') {
+        throw const AuthException(
+          'Password is too weak.',
+        );
+      }
+
+      throw AuthException(
+        e.message ?? 'Unable to create account.',
+      );
+    }
+  }
+
+  Future<void> logout() async {
+    await _auth.signOut();
+  }
+
+  User _userFromFirestore(
+    DocumentSnapshot<Map<String, dynamic>> doc,
+  ) {
+    final data = doc.data()!;
+
+    return User(
+      id: doc.id,
+      name: data['name'] as String? ?? '',
+      email: data['email'] as String? ?? '',
+      phone: data['phone'] as String? ?? '',
+      storeName: data['storeName'] as String? ?? '',
     );
-    if (exists) throw const AuthException('That email is already registered.');
-    final id = 'u${DateTime.now().microsecondsSinceEpoch}';
-    final phone = '09${DateTime.now().millisecondsSinceEpoch.toString().substring(5)}';
-    final user = User(id: id, name: normalizedName, email: normalizedEmail, phone: phone, storeName: '$normalizedName Store');
-    await StorageService.users.put(user.id, user);
-    await StorageService.auth.put('credential:${user.id}', password);
-    await StorageService.auth.put('credential:${user.email}', password);
-    await StorageService.auth.put('credential:${user.phone}', password);
-    await StorageService.auth.put('credential:${user.name.toLowerCase()}', password);
-    await StorageService.auth.put('sessionUserId', user.id);
-    return user;
   }
-
-  bool _matchesIdentifier(User user, String identifier) {
-    return user.email.toLowerCase() == identifier ||
-        user.phone.toLowerCase() == identifier ||
-        user.name.toLowerCase() == identifier ||
-        (identifier == 'rosita' && user.id == 'u1');
-  }
-
-  Future<void> logout() async => StorageService.auth.delete('sessionUserId');
 }
 
 class AuthException implements Exception {
   const AuthException(this.message);
+
   final String message;
+
   @override
   String toString() => message;
 }

@@ -1,13 +1,17 @@
 import 'package:flutter/foundation.dart';
+
 import '../../data/models/user.dart';
 import '../../data/repositories/auth_repository.dart';
 
 class AuthProvider extends ChangeNotifier {
-  AuthProvider(this._repository) : _user = _repository.currentUser();
+  AuthProvider(this._repository) {
+    _loadCurrentUser();
+  }
 
   final AuthRepository _repository;
+
   User? _user;
-  bool _loading = false;
+  bool _loading = true;
   String? _error;
 
   User? get user => _user;
@@ -15,9 +19,21 @@ class AuthProvider extends ChangeNotifier {
   bool get loading => _loading;
   String? get error => _error;
 
+  Future<void> _loadCurrentUser() async {
+    try {
+      _user = await _repository.currentUser();
+    } catch (_) {
+      _user = null;
+    } finally {
+      _loading = false;
+      notifyListeners();
+    }
+  }
+
   Future<void> login(String identifier, String password) async {
     _setLoading(true);
     _error = null;
+
     try {
       _user = await _repository.login(identifier, password);
     } catch (e) {
@@ -27,11 +43,20 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> signUp(String name, String email, String password) async {
+  Future<void> signUp(
+    String name,
+    String email,
+    String password,
+  ) async {
     _setLoading(true);
     _error = null;
+
     try {
-      _user = await _repository.signUp(name: name, email: email, password: password);
+      _user = await _repository.signUp(
+        name: name,
+        email: email,
+        password: password,
+      );
     } catch (e) {
       _error = e.toString().replaceFirst('AuthException: ', '');
     } finally {
