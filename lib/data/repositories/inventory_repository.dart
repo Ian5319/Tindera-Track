@@ -25,6 +25,14 @@ class InventoryRepository {
   }
 
   Future<void> save(Product product) async {
+    if (product.id.trim().isEmpty || product.name.trim().isEmpty) {
+      throw ArgumentError('A product must have an id and name.');
+    }
+    if (!product.price.isFinite || product.price <= 0 ||
+        product.stockQuantity < 0 || product.threshold < 0) {
+      throw ArgumentError('Product values are outside the allowed range.');
+    }
+
     await _products.doc(product.id).set({
       'id': product.id,
       'name': product.name,

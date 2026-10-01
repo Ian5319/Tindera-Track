@@ -149,9 +149,10 @@ class _CustomerBalanceScreenState
                                 return;
                               }
 
-                              final amount = double.parse(
-                                controller.text.replaceAll(',', ''),
-                              );
+                              final amount = Validators.parseMoney(controller.text);
+                              if (amount == null || !amount.isFinite) {
+                                return;
+                              }
 
                               if (amount > customer.balance) {
                                 ScaffoldMessenger.of(context)

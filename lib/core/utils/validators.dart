@@ -41,15 +41,29 @@ class Validators {
   static String? money(String? value) {
     final required = requiredField(value, 'Amount');
     if (required != null) return required;
-    final amount = double.tryParse(value!.replaceAll(',', ''));
-    if (amount == null || amount <= 0) return 'Enter an amount greater than 0.';
+    final amount = parseMoney(value);
+    if (amount == null || !amount.isFinite || amount <= 0) {
+      return 'Enter an amount greater than 0.';
+    }
     return null;
+  }
+
+  static double? parseMoney(String? value) {
+    if (value == null) return null;
+    final input = value.trim();
+    final validFormat = RegExp(
+      r'^\+?(?:(?:\d+)(?:\.\d+)?|(?:\d{1,3}(?:,\d{3})+)(?:\.\d+)?)$',
+    );
+    if (!validFormat.hasMatch(input)) return null;
+
+    final parsed = double.tryParse(input.replaceAll(',', ''));
+    return parsed != null && parsed.isFinite ? parsed : null;
   }
 
   static String? integer(String? value, [String label = 'Quantity']) {
     final required = requiredField(value, label);
     if (required != null) return required;
-    final parsed = int.tryParse(value!);
+    final parsed = int.tryParse(value!.trim());
     if (parsed == null || parsed < 0) return '$label must be a whole number.';
     return null;
   }

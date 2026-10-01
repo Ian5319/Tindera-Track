@@ -55,28 +55,56 @@ class _AddInventoryItemScreenState extends State<AddInventoryItemScreen> {
   }
 
   Future<void> _useGallery() async {
-    final file = await _picker.pickImage(source: ImageSource.gallery);
-    if (file != null && mounted) setState(() => _captured = file);
+    try {
+      final file = await _picker.pickImage(source: ImageSource.gallery);
+      if (file != null && mounted) setState(() => _captured = file);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not choose a photo. Please check photo permissions and try again.')),
+        );
+      }
+    }
   }
 
   Future<void> _save() async {
     if (_captured == null) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Take a product photo first.'))); return; }
     if (!(_formKey.currentState?.validate() ?? false)) return;
+
+    final price = Validators.parseMoney(_price.text);
+    final stock = int.tryParse(_stock.text.trim());
+    final threshold = int.tryParse(_threshold.text.trim());
+    if (price == null || !price.isFinite || stock == null || threshold == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter valid inventory values.')),
+      );
+      return;
+    }
+
     setState(() => _saving = true);
-    final product = Product(
-      id: widget.product?.id ?? 'p${DateTime.now().microsecondsSinceEpoch}',
-      name: _name.text.trim(),
-      price: double.parse(_price.text.replaceAll(',', '')),
-      stockQuantity: int.parse(_stock.text),
-      threshold: int.parse(_threshold.text),
-      photoUrl: _captured?.path,
-      createdAt: widget.product?.createdAt ?? DateTime.now(),
-    );
-    await context.read<InventoryProvider>().saveProduct(product);
-    if (!mounted) return;
-    setState(() => _saving = false);
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(isEditing ? 'Inventory item updated.' : 'Item added to inventory.')));
-    context.pop();
+    try {
+      final product = Product(
+        id: widget.product?.id ?? 'p${DateTime.now().microsecondsSinceEpoch}',
+        name: _name.text.trim(),
+        price: price,
+        stockQuantity: stock,
+        threshold: threshold,
+        photoUrl: _captured?.path,
+        createdAt: widget.product?.createdAt ?? DateTime.now(),
+      );
+      await context.read<InventoryProvider>().saveProduct(product);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(isEditing ? 'Inventory item updated.' : 'Item added to inventory.')));
+      context.pop();
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Unable to save the inventory item. Please try again.')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
   }
 
   @override

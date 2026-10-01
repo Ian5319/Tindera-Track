@@ -44,12 +44,17 @@ class UtangRepository {
     required String name,
     String phone = '',
   }) async {
+    final normalizedName = name.trim();
+    if (normalizedName.isEmpty) {
+      throw ArgumentError('A customer must have a name.');
+    }
+
     final id =
         'c${DateTime.now().microsecondsSinceEpoch}';
 
     final customer = Customer(
       id: id,
-      name: name.trim(),
+      name: normalizedName,
       phone: phone.trim(),
       balance: 0,
       createdAt: DateTime.now(),
@@ -92,6 +97,25 @@ class UtangRepository {
   Future<void> addTransaction(
     UtangTransaction transaction,
   ) async {
+    if (transaction.id.trim().isEmpty ||
+        transaction.customerId.trim().isEmpty ||
+        !transaction.amount.isFinite ||
+        transaction.amount <= 0) {
+      throw ArgumentError('Transaction values are outside the allowed range.');
+    }
+
+    final customer = await _customers.doc(transaction.customerId).get();
+    if (!customer.exists) {
+      throw ArgumentError('The selected customer does not exist.');
+    }
+
+    if (transaction.type == UtangType.payment) {
+      final balance = await currentBalance(transaction.customerId);
+      if (transaction.amount > balance) {
+        throw ArgumentError('Payment cannot be greater than the current balance.');
+      }
+    }
+
     await _transactions.doc(transaction.id).set({
       'id': transaction.id,
       'customerId': transaction.customerId,
@@ -135,7 +159,7 @@ class UtangRepository {
 
         if (type == UtangType.credit.name) {
           balance += amount;
-        } else {
+        } else if (type == UtangType.payment.name) {
           balance -= amount;
         }
       }
@@ -156,7 +180,7 @@ class UtangRepository {
     final transactions =
         await getTransactionsFor(customerId);
 
-    return transactions.fold<double>(
+    final balance = transactions.fold<double>(
       0,
       (total, transaction) =>
           total +
@@ -164,6 +188,8 @@ class UtangRepository {
               ? transaction.amount
               : -transaction.amount),
     );
+
+    return balance < 0 ? 0 : balance;
   }
 
   Customer _customerFromFirestore(

@@ -41,22 +41,30 @@ class _RecordUtangScreenState extends State<RecordUtangScreen> {
   }
 
   Future<void> _attachPhoto() async {
-    final picked = await _picker.pickImage(
-      source: ImageSource.camera,
-    );
-
-    if (picked != null && mounted) {
-      setState(() {
-        _photo = picked;
-      });
+    try {
+      final picked = await _picker.pickImage(source: ImageSource.camera);
+      if (picked != null && mounted) {
+        setState(() => _photo = picked);
+      }
+    } catch (_) {
+      try {
+        final picked = await _picker.pickImage(source: ImageSource.gallery);
+        if (picked != null && mounted) {
+          setState(() => _photo = picked);
+        }
+      } catch (_) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Could not attach a photo. Please check photo permissions and try again.')),
+          );
+        }
+      }
     }
   }
 
   double get amount {
-    return double.tryParse(
-          _amount.text.replaceAll(',', ''),
-        ) ??
-        0;
+    final parsed = Validators.parseMoney(_amount.text);
+    return parsed ?? 0;
   }
 
   double get afterEntry {
