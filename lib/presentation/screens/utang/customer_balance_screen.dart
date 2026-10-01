@@ -81,111 +81,166 @@ class _CustomerBalanceScreenState
   }
 
   Future<void> _recordPayment(
-    BuildContext context,
-    Customer customer,
-  ) async {
-    final controller = TextEditingController();
-    final formKey = GlobalKey<FormState>();
+  BuildContext context,
+  Customer customer,
+) async {
+  final controller = TextEditingController();
+  final formKey = GlobalKey<FormState>();
 
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      builder: (sheetContext) => Padding(
-        padding: EdgeInsets.only(
-          left: 20,
-          right: 20,
-          top: 20,
-          bottom:
-              MediaQuery.of(sheetContext).viewInsets.bottom + 20,
-        ),
-        child: Form(
-          key: formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Record Payment',
-                style: Theme.of(context)
-                    .textTheme
-                    .titleLarge
-                    ?.copyWith(fontWeight: FontWeight.w900),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Balance: ${currencyFormatter.format(customer.balance)}',
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: controller,
-                validator: Validators.money,
-                keyboardType:
-                    const TextInputType.numberWithOptions(
-                  decimal: true,
-                ),
-                decoration: const InputDecoration(
-                  labelText: 'Payment amount',
-                  prefixText: '₱ ',
-                ),
-              ),
-              const SizedBox(height: 16),
-              SizedBox(
-                width: double.infinity,
-                height: 52,
-                child: ElevatedButton(
-                  onPressed: () async {
-                    if (!(formKey.currentState?.validate() ??
-                        false)) {
-                      return;
-                    }
+  await showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    builder: (sheetContext) {
+      bool saving = false;
 
-                    final amount = double.parse(
-                      controller.text.replaceAll(',', ''),
-                    );
-
-                    if (amount > customer.balance) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            'Payment cannot be greater than the current balance.',
-                          ),
+      return StatefulBuilder(
+        builder: (context, setSheetState) {
+          return Padding(
+            padding: EdgeInsets.only(
+              left: 20,
+              right: 20,
+              top: 20,
+              bottom:
+                  MediaQuery.of(sheetContext).viewInsets.bottom + 20,
+            ),
+            child: Form(
+              key: formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Record Payment',
+                    style: Theme.of(context)
+                        .textTheme
+                        .titleLarge
+                        ?.copyWith(
+                          fontWeight: FontWeight.w900,
                         ),
-                      );
-                      return;
-                    }
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Balance: ${currencyFormatter.format(customer.balance)}',
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: controller,
+                    validator: Validators.money,
+                    keyboardType:
+                        const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    decoration: const InputDecoration(
+                      labelText: 'Payment amount',
+                      prefixText: '₱ ',
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 52,
+                    child: ElevatedButton(
+                      onPressed: saving
+                          ? null
+                          : () async {
+                              if (!(formKey.currentState
+                                      ?.validate() ??
+                                  false)) {
+                                return;
+                              }
 
-                    await context
-                        .read<UtangProvider>()
-                        .addTransaction(
-                          UtangTransaction(
-                            id:
-                                't${DateTime.now().microsecondsSinceEpoch}',
-                            customerId: customer.id,
-                            amount: amount,
-                            type: UtangType.payment,
-                            createdAt: DateTime.now(),
-                          ),
-                        );
+                              final amount = double.parse(
+                                controller.text.replaceAll(',', ''),
+                              );
 
-                    if (context.mounted) {
-                      Navigator.of(context).pop();
-                    }
-                  },
-                  child: const Text('Save Payment'),
-                ),
+                              if (amount > customer.balance) {
+                                ScaffoldMessenger.of(context)
+                                    .showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      'Payment cannot be greater than the current balance.',
+                                    ),
+                                  ),
+                                );
+                                return;
+                              }
+
+                              setSheetState(() {
+                                saving = true;
+                              });
+
+                              try {
+                                final provider =
+                                    context.read<UtangProvider>();
+
+                                final transaction =
+                                    UtangTransaction(
+                                  id:
+                                      't${DateTime.now().microsecondsSinceEpoch}',
+                                  customerId: customer.id,
+                                  amount: amount,
+                                  type: UtangType.payment,
+                                  createdAt: DateTime.now(),
+                                );
+
+                                await provider.addTransaction(
+                                  transaction,
+                                );
+
+                                if (!sheetContext.mounted) {
+                                  return;
+                                }
+
+                                Navigator.of(sheetContext).pop();
+                              } catch (e) {
+                                debugPrint(
+                                  'PAYMENT ERROR: $e',
+                                );
+
+                                if (!sheetContext.mounted) {
+                                  return;
+                                }
+
+                                setSheetState(() {
+                                  saving = false;
+                                });
+
+                                ScaffoldMessenger.of(sheetContext)
+                                    .showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      'Payment failed: $e',
+                                    ),
+                                  ),
+                                );
+                              }
+                            },
+                      child: saving
+                          ? const SizedBox(
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                              ),
+                            )
+                          : const Text('Save Payment'),
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
-        ),
-      ),
-    );
+            ),
+          );
+        },
+      );
+    },
+  );
 
-    controller.dispose();
+  controller.dispose();
 
-    if (mounted) {
-      await _loadData();
-    }
+  if (mounted) {
+    await _loadData();
   }
+}
 
   @override
   Widget build(BuildContext context) {
