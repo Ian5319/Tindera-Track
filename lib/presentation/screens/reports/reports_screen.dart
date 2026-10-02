@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/utils/formatters.dart';
+import '../../providers/inventory_provider.dart';
+import '../../providers/utang_provider.dart';
 
 class ReportsScreen extends StatefulWidget {
   const ReportsScreen({super.key});
@@ -17,7 +20,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
   @override
   Widget build(BuildContext context) {
     final data = _isWeekly ? _weeklyData : _daily;
-    final totalSales = _isWeekly ? 30365.0 : 6970.0;
+    final inventory = context.watch<InventoryProvider>();
+    final utang = context.watch<UtangProvider>();
+    final totalSales = inventory.items.fold<double>(
+      0,
+      (total, product) => total + product.price * product.stockQuantity,
+    );
     return ListView(padding: const EdgeInsets.fromLTRB(16, 12, 16, 24), children: [
       Text('Reports', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900)),
       const SizedBox(height: 16),
@@ -25,7 +33,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
       const SizedBox(height: 18),
       Card(child: Padding(padding: const EdgeInsets.fromLTRB(18, 18, 18, 14), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [const Text('Sales visualization', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18)), const SizedBox(height: 10), SizedBox(height: 240, child: CustomPaint(painter: SalesBarChartPainter(data: data, labels: _isWeekly ? const ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'] : const ['7a','8a','9a','10a','11a','12p','1p','2p','3p','4p','5p','6p'])))]))),
       const SizedBox(height: 16),
-      Row(children: [Expanded(child: _summaryCard('Total Sales', currencyFormatter.format(totalSales), Icons.point_of_sale_outlined, AppColors.primary)), const SizedBox(width: 12), Expanded(child: _summaryCard('Outstanding Utang', currencyFormatter.format(2485.00), Icons.receipt_long_outlined, AppColors.danger))]),
+      Row(children: [Expanded(child: _summaryCard('Total Sales', currencyFormatter.format(totalSales), Icons.point_of_sale_outlined, AppColors.primary)), const SizedBox(width: 12), Expanded(child: _summaryCard('Outstanding Utang', currencyFormatter.format(utang.outstanding), Icons.receipt_long_outlined, AppColors.danger))]),
       const SizedBox(height: 20),
       const Text('Top-Selling Products', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
       const SizedBox(height: 10),
