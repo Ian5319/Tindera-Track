@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../providers/auth_provider.dart';
+import '../../data/models/customer.dart';
 import '../../data/models/product.dart';
 import '../screens/auth/login_screen.dart';
 import '../screens/auth/signup_screen.dart';
@@ -9,6 +10,7 @@ import '../screens/inventory/inventory_list_screen.dart';
 import '../screens/inventory/add_inventory_item_screen.dart';
 import '../screens/utang/record_utang_screen.dart';
 import '../screens/utang/customer_balance_screen.dart';
+import '../screens/utang/record_payment_screen.dart';
 import '../screens/utang/utang_list_screen.dart';
 import '../screens/reports/reports_screen.dart';
 import 'route_names.dart';
@@ -41,6 +43,13 @@ class AppRouter {
         GoRoute(path: RouteNames.addInventory, builder: (context, state) => AddInventoryItemScreen(product: state.extra is Product ? state.extra as Product : null)),
         GoRoute(path: RouteNames.recordUtang, builder: (_, __) => const RecordUtangScreen()),
         GoRoute(path: '${RouteNames.customer}/:id', builder: (_, state) => CustomerBalanceScreen(customerId: state.pathParameters['id']!)),
+        GoRoute(
+          path: RouteNames.recordPayment,
+          builder: (_, state) => RecordPaymentScreen(
+            customerId: state.pathParameters['id']!,
+            customer: state.extra is Customer ? state.extra as Customer : null,
+          ),
+        ),
       ],
     );
   }

@@ -1,0 +1,51 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function validPaymentDocument(paymentId) {
+      return request.resource.data.keys().hasOnly([
+          'id',
+          'customerId',
+          'customerName',
+          'amount',
+          'paymentDate',
+          'note',
+          'recordedBy',
+          'createdAt',
+          'updatedAt'
+        ])
+        && request.resource.data.id == paymentId
+        && request.resource.data.customerId is string
+        && request.resource.data.customerName is string
+        && request.resource.data.amount is number
+        && request.resource.data.amount > 0
+        && request.resource.data.paymentDate is timestamp
+        && (request.resource.data.note == null
+            || request.resource.data.note is string)
+        && request.resource.data.recordedBy == request.auth.uid
+        && request.resource.data.createdAt is timestamp
+        && request.resource.data.updatedAt is timestamp;
+    }
+
+    match /payment_records/{paymentId} {
+      allow create: if signedIn() && validPaymentDocument(paymentId);
+      allow read: if signedIn()
+        && (resource == null
+            || resource.data.recordedBy == request.auth.uid);
+
+      // Payment records are immutable history. The app creates a new record
+      // for every payment and never overwrites an existing payment.
+      allow update, delete: if false;
+    }
+
+    // This is a dedicated payment-project rules file. Any collection other
+    // than payment_records is denied in the payment backend.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

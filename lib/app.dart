@@ -6,8 +6,10 @@ import 'data/repositories/inventory_repository.dart';
 import 'data/repositories/utang_repository.dart';
 import 'presentation/providers/auth_provider.dart';
 import 'presentation/providers/inventory_provider.dart';
+import 'presentation/providers/payment_provider.dart';
 import 'presentation/providers/utang_provider.dart';
 import 'presentation/routes/app_router.dart';
+import 'services/payment_service.dart';
 
 class TinderaTrackApp extends StatelessWidget {
   const TinderaTrackApp({super.key});
@@ -30,6 +32,15 @@ MultiProvider buildAppProviders(Widget child) {
       ChangeNotifierProvider(create: (_) => AuthProvider(AuthRepository())),
       ChangeNotifierProvider(create: (_) => InventoryProvider(InventoryRepository())),
       ChangeNotifierProvider(create: (_) => UtangProvider(UtangRepository())),
+      ChangeNotifierProxyProvider<AuthProvider, PaymentProvider>(
+        create: (_) => PaymentProvider(
+          PaymentService.forCurrentFirebaseApp(),
+        ),
+        update: (_, auth, payments) {
+          payments!.setAuthenticated(auth.isAuthenticated);
+          return payments;
+        },
+      ),
     ],
     child: child,
   );

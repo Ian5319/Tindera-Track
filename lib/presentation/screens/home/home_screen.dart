@@ -5,6 +5,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/utils/formatters.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/inventory_provider.dart';
+import '../../providers/payment_provider.dart';
 import '../../providers/utang_provider.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -15,16 +16,18 @@ class HomeScreen extends StatelessWidget {
     final user = context.watch<AuthProvider>().user;
     final inventory = context.watch<InventoryProvider>();
     final utang = context.watch<UtangProvider>();
+    final payments = context.watch<PaymentProvider>();
     const todaysSales = 4865.00;
+    final outstanding = payments.remainingFrom(utang.outstanding);
 
-    return RefreshIndicator(onRefresh: () async { await inventory.load(); await utang.load(); }, child: ListView(padding: const EdgeInsets.fromLTRB(20, 18, 20, 28), children: [
+    return RefreshIndicator(onRefresh: () async { await inventory.load(); await utang.load(); await payments.load(); }, child: ListView(padding: const EdgeInsets.fromLTRB(20, 18, 20, 28), children: [
       Row(children: [Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Hello, ${user?.name.split(' ').first ?? 'Store Owner'} 👋', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900)), const SizedBox(height: 4), Text(user?.storeName ?? 'Your store', style: Theme.of(context).textTheme.bodyLarge)])), PopupMenuButton<String>(onSelected: (value) async { if (value == 'logout') { await context.read<AuthProvider>().logout(); if (context.mounted) context.go('/login'); } }, itemBuilder: (_) => const [PopupMenuItem(value: 'logout', child: Text('Log out'))], child: const CircleAvatar(child: Icon(Icons.person_outline)))]),
       const SizedBox(height: 24),
       _MetricCard(title: "Today's Sales", value: currencyFormatter.format(todaysSales), icon: Icons.point_of_sale_outlined),
       const SizedBox(height: 14),
       _MetricCard(title: 'Low Stock Alerts', value: '${inventory.lowStockItems.length} items need attention', icon: Icons.warning_amber_rounded, warning: inventory.lowStockItems.isNotEmpty, onTap: () => context.go('/inventory')),
       const SizedBox(height: 14),
-      _MetricCard(title: 'Outstanding Utang', value: currencyFormatter.format(utang.outstanding), icon: Icons.receipt_long_outlined, warning: utang.outstanding > 0, onTap: () => context.go('/utang')),
+      _MetricCard(title: 'Outstanding Utang', value: currencyFormatter.format(outstanding), icon: Icons.receipt_long_outlined, warning: outstanding > 0, onTap: () => context.go('/utang')),
       const SizedBox(height: 24),
       const Text('Quick actions', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
       const SizedBox(height: 12),

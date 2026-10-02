@@ -7,5 +7,6 @@ abstract final class RouteNames {
   static const utang = '/utang';
   static const recordUtang = '/utang/record';
   static const customer = '/utang/customer';
+  static const recordPayment = '/utang/customer/:id/payment';
   static const reports = '/reports';
 }

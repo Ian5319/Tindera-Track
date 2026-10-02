@@ -1,11 +1,15 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../core/utils/formatters.dart';
-import '../../../core/utils/validators.dart';
 import '../../../data/models/customer.dart';
+import '../../../data/models/payment_record.dart';
 import '../../../data/models/utang_transaction.dart';
+import '../../providers/payment_provider.dart';
 import '../../providers/utang_provider.dart';
 import '../../widgets/utang/transaction_item.dart';
 
@@ -25,6 +29,7 @@ class CustomerBalanceScreen extends StatefulWidget {
 class _CustomerBalanceScreenState extends State<CustomerBalanceScreen> {
   Customer? _customer;
   List<UtangTransaction> _transactions = [];
+  List<PaymentRecord> _payments = [];
   bool _loading = true;
   String? _error;
 
@@ -43,8 +48,14 @@ class _CustomerBalanceScreenState extends State<CustomerBalanceScreen> {
     }
 
     try {
-      final provider = context.read<UtangProvider>();
-      final customer = await provider.customer(widget.customerId);
+      final utang = context.read<UtangProvider>();
+      final payments = context.read<PaymentProvider>();
+      final customerFuture = utang.customer(widget.customerId);
+      final transactionsFuture = utang.transactions(widget.customerId);
+
+      await payments.load();
+      final customer = await customerFuture;
+      final transactions = await transactionsFuture;
 
       if (!mounted) return;
 
@@ -52,19 +63,17 @@ class _CustomerBalanceScreenState extends State<CustomerBalanceScreen> {
         setState(() {
           _customer = null;
           _transactions = [];
+          _payments = [];
           _loading = false;
           _error = 'Customer not found.';
         });
         return;
       }
 
-      final transactions = await provider.transactions(widget.customerId);
-
-      if (!mounted) return;
-
       setState(() {
         _customer = customer;
         _transactions = transactions;
+        _payments = payments.paymentsForCustomer(customer.id);
         _loading = false;
       });
     } catch (_) {
@@ -77,14 +86,10 @@ class _CustomerBalanceScreenState extends State<CustomerBalanceScreen> {
     }
   }
 
-  Future<void> _recordPayment(
-    BuildContext context,
-    Customer customer,
-  ) async {
-    final saved = await showModalBottomSheet<bool>(
-      context: context,
-      isScrollControlled: true,
-      builder: (_) => _RecordPaymentSheet(customer: customer),
+  Future<void> _recordPayment(Customer customer) async {
+    final saved = await context.push<bool>(
+      '/utang/customer/${customer.id}/payment',
+      extra: customer,
     );
 
     if (saved == true && mounted) {
@@ -96,9 +101,7 @@ class _CustomerBalanceScreenState extends State<CustomerBalanceScreen> {
   Widget build(BuildContext context) {
     if (_loading) {
       return const Scaffold(
-        body: Center(
-          child: CircularProgressIndicator(),
-        ),
+        body: Center(child: CircularProgressIndicator()),
       );
     }
 
@@ -114,6 +117,11 @@ class _CustomerBalanceScreenState extends State<CustomerBalanceScreen> {
     }
 
     final customer = _customer!;
+    final paymentProvider = context.watch<PaymentProvider>();
+    final paymentError = paymentProvider.error;
+    final totalPayments = paymentProvider.totalPaymentsFor(customer.id);
+    final remainingBalance =
+        math.max(0, customer.balance - totalPayments).toDouble();
 
     return Scaffold(
       appBar: AppBar(
@@ -144,7 +152,7 @@ class _CustomerBalanceScreenState extends State<CustomerBalanceScreen> {
                           Text(customer.phone),
                           const SizedBox(height: 14),
                           Text(
-                            currencyFormatter.format(customer.balance),
+                            currencyFormatter.format(remainingBalance),
                             style: const TextStyle(
                               fontSize: 30,
                               fontWeight: FontWeight.w900,
@@ -152,7 +160,7 @@ class _CustomerBalanceScreenState extends State<CustomerBalanceScreen> {
                             ),
                           ),
                           const Text(
-                            'Total balance',
+                            'Remaining balance',
                             style: TextStyle(fontWeight: FontWeight.w700),
                           ),
                         ],
@@ -175,7 +183,7 @@ class _CustomerBalanceScreenState extends State<CustomerBalanceScreen> {
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: 10),
                   child: Text(
-                    'Transaction history',
+                    'Utang transaction history',
                     style: TextStyle(
                       fontWeight: FontWeight.w800,
                       fontSize: 18,
@@ -185,9 +193,7 @@ class _CustomerBalanceScreenState extends State<CustomerBalanceScreen> {
                 if (_transactions.isEmpty)
                   const Padding(
                     padding: EdgeInsets.all(30),
-                    child: Center(
-                      child: Text('No transactions yet.'),
-                    ),
+                    child: Center(child: Text('No Utang transactions yet.')),
                   )
                 else
                   ..._transactions.map(
@@ -196,6 +202,32 @@ class _CustomerBalanceScreenState extends State<CustomerBalanceScreen> {
                       child: TransactionItem(transaction: tx),
                     ),
                   ),
+                const SizedBox(height: 12),
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 10),
+                  child: Text(
+                    'Payment history',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 18,
+                    ),
+                  ),
+                ),
+                if (paymentError != null)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    child: Text(
+                      paymentError,
+                      style: const TextStyle(color: AppColors.danger),
+                    ),
+                  )
+                else if (_payments.isEmpty)
+                  const Padding(
+                    padding: EdgeInsets.all(30),
+                    child: Center(child: Text('No payments recorded yet.')),
+                  )
+                else
+                  ..._payments.map((payment) => _PaymentRecordTile(payment)),
               ],
             ),
           ),
@@ -217,9 +249,9 @@ class _CustomerBalanceScreenState extends State<CustomerBalanceScreen> {
             style: ElevatedButton.styleFrom(
               minimumSize: const Size.fromHeight(52),
             ),
-            onPressed: customer.balance <= 0
+            onPressed: remainingBalance <= 0 || paymentError != null
                 ? null
-                : () => _recordPayment(context, customer),
+                : () => _recordPayment(customer),
             icon: const Icon(Icons.payments_outlined),
             label: const Text('Record Payment'),
           ),
@@ -229,127 +261,34 @@ class _CustomerBalanceScreenState extends State<CustomerBalanceScreen> {
   }
 }
 
-class _RecordPaymentSheet extends StatefulWidget {
-  const _RecordPaymentSheet({required this.customer});
+class _PaymentRecordTile extends StatelessWidget {
+  const _PaymentRecordTile(this.payment);
 
-  final Customer customer;
-
-  @override
-  State<_RecordPaymentSheet> createState() => _RecordPaymentSheetState();
-}
-
-class _RecordPaymentSheetState extends State<_RecordPaymentSheet> {
-  final _formKey = GlobalKey<FormState>();
-  final _controller = TextEditingController();
-  bool _saving = false;
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  Future<void> _save() async {
-    if (!(_formKey.currentState?.validate() ?? false)) {
-      return;
-    }
-
-    final amount = Validators.parseMoney(_controller.text);
-    if (amount == null) {
-      return;
-    }
-
-    if (amount > widget.customer.balance) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Payment cannot be greater than the current balance.',
-          ),
-        ),
-      );
-      return;
-    }
-
-    setState(() => _saving = true);
-
-    try {
-      final transaction = UtangTransaction(
-        id: 't${DateTime.now().microsecondsSinceEpoch}',
-        customerId: widget.customer.id,
-        amount: amount,
-        type: UtangType.payment,
-        createdAt: DateTime.now(),
-      );
-
-      await context.read<UtangProvider>().addTransaction(transaction);
-
-      if (mounted) {
-        Navigator.of(context).pop(true);
-      }
-    } catch (error) {
-      if (!mounted) return;
-
-      setState(() => _saving = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Payment failed: $error')),
-      );
-    }
-  }
+  final PaymentRecord payment;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.only(
-        left: 20,
-        right: 20,
-        top: 20,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 20,
-      ),
-      child: Form(
-        key: _formKey,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Record Payment',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w900,
-                  ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Balance: ${currencyFormatter.format(widget.customer.balance)}',
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _controller,
-              validator: Validators.money,
-              keyboardType: const TextInputType.numberWithOptions(
-                decimal: true,
-              ),
-              decoration: const InputDecoration(
-                labelText: 'Payment amount',
-                prefixText: '₱ ',
-              ),
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              height: 52,
-              child: ElevatedButton(
-                onPressed: _saving ? null : _save,
-                child: _saving
-                    ? const SizedBox(
-                        width: 22,
-                        height: 22,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Text('Save Payment'),
-              ),
-            ),
-          ],
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: ListTile(
+        leading: const CircleAvatar(
+          backgroundColor: AppColors.successBg,
+          child: Icon(
+            Icons.payments_outlined,
+            color: AppColors.secondary,
+          ),
         ),
+        title: Text(
+          currencyFormatter.format(payment.amount),
+          style: const TextStyle(
+            fontWeight: FontWeight.w800,
+            color: AppColors.secondary,
+          ),
+        ),
+        subtitle: Text(
+          '${dateFormatter.format(payment.paymentDate)}${payment.note == null ? '' : '\n${payment.note}'}',
+        ),
+        isThreeLine: payment.note != null,
       ),
     );
   }
