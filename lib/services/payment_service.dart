@@ -46,7 +46,6 @@ class PaymentService {
     String? note,
     String? requestId,
   }) {
-    final recordedBy = _requireUserId();
     _validate(
       customerId: customerId,
       customerName: customerName,
@@ -67,7 +66,7 @@ class PaymentService {
       amount: amount,
       paymentDate: paymentDate,
       note: note?.trim().isEmpty == true ? null : note?.trim(),
-      recordedBy: recordedBy,
+      recordedBy: _recordedBy,
       createdAt: now,
       updatedAt: now,
     );
@@ -84,7 +83,6 @@ class PaymentService {
   }
 
   Future<List<PaymentRecord>> getPayments(String customerId) {
-    _requireUserId();
     return _guard(
       () => _repository.getPayments(
         customerId: customerId,
@@ -93,14 +91,12 @@ class PaymentService {
   }
 
   Future<List<PaymentRecord>> getAllPayments() {
-    _requireUserId();
     return _guard(
       () => _repository.getAllPayments(),
     );
   }
 
   Future<double> getTotalPayments(String customerId) {
-    _requireUserId();
     return _guard(
       () => _repository.getTotalPayments(
         customerId: customerId,
@@ -108,14 +104,9 @@ class PaymentService {
     );
   }
 
-  String _requireUserId() {
+  String get _recordedBy {
     final userId = _currentUserId()?.trim();
-    if (userId == null || userId.isEmpty) {
-      throw const PaymentAuthenticationException(
-        'You must be signed in to manage payments.',
-      );
-    }
-    return userId;
+    return userId == null || userId.isEmpty ? 'owner' : userId;
   }
 
   void _validate({
@@ -165,8 +156,8 @@ class PaymentService {
     switch (error.code) {
       case 'permission-denied':
       case 'unauthenticated':
-        return const PaymentPermissionException(
-          'You do not have permission to manage payment records.',
+        return const PaymentException(
+          'Unable to save the payment. Please try again.',
         );
       case 'already-exists':
         return PaymentDuplicateException(error.message);
@@ -191,16 +182,8 @@ class PaymentException implements Exception {
   String toString() => message;
 }
 
-class PaymentAuthenticationException extends PaymentException {
-  const PaymentAuthenticationException(super.message);
-}
-
 class PaymentValidationException extends PaymentException {
   const PaymentValidationException(super.message);
-}
-
-class PaymentPermissionException extends PaymentException {
-  const PaymentPermissionException(super.message);
 }
 
 class PaymentNetworkException extends PaymentException {

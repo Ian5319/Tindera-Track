@@ -26,7 +26,7 @@ service cloud.firestore {
         && request.resource.data.paymentDate is timestamp
         && (request.resource.data.note == null
             || request.resource.data.note is string)
-        && request.resource.data.recordedBy == request.auth.uid
+        && request.resource.data.recordedBy is string
         && request.resource.data.createdAt is timestamp
         && request.resource.data.updatedAt is timestamp;
     }

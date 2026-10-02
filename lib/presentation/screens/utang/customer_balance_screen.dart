@@ -249,7 +249,7 @@ class _CustomerBalanceScreenState extends State<CustomerBalanceScreen> {
             style: ElevatedButton.styleFrom(
               minimumSize: const Size.fromHeight(52),
             ),
-            onPressed: remainingBalance <= 0 || paymentError != null
+            onPressed: remainingBalance <= 0
                 ? null
                 : () => _recordPayment(customer),
             icon: const Icon(Icons.payments_outlined),

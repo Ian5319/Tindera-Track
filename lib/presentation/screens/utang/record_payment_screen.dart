@@ -66,7 +66,7 @@ class _RecordPaymentScreenState extends State<RecordPaymentScreen> {
         _loading = false;
         _error = customer == null
             ? 'Customer not found.'
-            : payments.error;
+            : null;
       });
     } catch (error) {
       if (!mounted) return;
