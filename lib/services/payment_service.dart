@@ -153,7 +153,7 @@ class PaymentService {
     switch (error.code) {
       case 'permission-denied':
       case 'unauthenticated':
-        return PaymentPermissionException(
+        return const PaymentPermissionException(
           'You do not have permission to manage payment records.',
         );
       case 'already-exists':
@@ -161,7 +161,7 @@ class PaymentService {
       case 'unavailable':
       case 'deadline-exceeded':
       case 'network-request-failed':
-        return PaymentNetworkException(
+        return const PaymentNetworkException(
           'The payment service is unavailable. Please try again.',
         );
       default:

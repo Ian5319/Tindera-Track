@@ -53,9 +53,10 @@ class _RecordPaymentScreenState extends State<RecordPaymentScreen> {
 
   Future<void> _load() async {
     try {
-      final customer = _customer ??
-          await context.read<UtangProvider>().customer(widget.customerId);
+      final utang = context.read<UtangProvider>();
       final payments = context.read<PaymentProvider>();
+      final customer = _customer ??
+          await utang.customer(widget.customerId);
       await payments.load();
 
       if (!mounted) return;

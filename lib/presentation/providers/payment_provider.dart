@@ -16,6 +16,8 @@ class PaymentProvider extends ChangeNotifier {
   String? error;
   bool _authenticated = false;
   Future<void>? _loadFuture;
+  int _authGeneration = 0;
+  bool _disposed = false;
 
   List<PaymentRecord> get payments => List.unmodifiable(_payments);
 
@@ -44,14 +46,24 @@ class PaymentProvider extends ChangeNotifier {
     if (_authenticated == authenticated) return;
 
     _authenticated = authenticated;
+    final generation = ++_authGeneration;
     if (!authenticated) {
+      _loadFuture = null;
       _payments = [];
       error = null;
-      notifyListeners();
+      loading = false;
+      _notifyAfterProviderUpdate();
       return;
     }
 
-    unawaited(load());
+    // ProxyProvider may invoke this during a widget update. Defer the load
+    // and notification until that update has finished.
+    unawaited(Future<void>.microtask(() async {
+      if (_disposed || !_authenticated || generation != _authGeneration) {
+        return;
+      }
+      await load();
+    }));
   }
 
   Future<void> load() {
@@ -60,29 +72,43 @@ class PaymentProvider extends ChangeNotifier {
     final activeLoad = _loadFuture;
     if (activeLoad != null) return activeLoad;
 
-    final loadFuture = _loadInternal();
+    final generation = _authGeneration;
+    final loadFuture = _loadInternal(generation);
     _loadFuture = loadFuture;
     loadFuture.then<void>(
-      (_) => _loadFuture = null,
+      (_) {
+        if (identical(_loadFuture, loadFuture)) _loadFuture = null;
+      },
       onError: (Object _, StackTrace __) {
-        _loadFuture = null;
+        if (identical(_loadFuture, loadFuture)) _loadFuture = null;
       },
     );
     return loadFuture;
   }
 
-  Future<void> _loadInternal() async {
+  Future<void> _loadInternal(int generation) async {
+    if (_disposed || !_authenticated || generation != _authGeneration) {
+      return;
+    }
+
     loading = true;
     notifyListeners();
 
     try {
-      _payments = await _service.getAllPayments();
-      error = null;
+      final loadedPayments = await _service.getAllPayments();
+      if (_authenticated && generation == _authGeneration) {
+        _payments = loadedPayments;
+        error = null;
+      }
     } catch (exception) {
-      error = _messageFor(exception);
+      if (_authenticated && generation == _authGeneration) {
+        error = _messageFor(exception);
+      }
     } finally {
-      loading = false;
-      notifyListeners();
+      if (!_disposed && generation == _authGeneration) {
+        loading = false;
+        notifyListeners();
+      }
     }
   }
 
@@ -130,5 +156,17 @@ class PaymentProvider extends ChangeNotifier {
   String _messageFor(Object exception) {
     if (exception is PaymentException) return exception.message;
     return 'Unable to manage payment records. Please try again.';
+  }
+
+  void _notifyAfterProviderUpdate() {
+    unawaited(Future<void>.microtask(() {
+      if (!_disposed) notifyListeners();
+    }));
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
   }
 }
