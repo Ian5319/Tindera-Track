@@ -117,6 +117,7 @@ class PaymentProvider extends ChangeNotifier {
     required String customerName,
     required double amount,
     required DateTime paymentDate,
+    double? outstandingBalance,
     String? note,
     String? requestId,
   }) async {
@@ -135,6 +136,7 @@ class PaymentProvider extends ChangeNotifier {
         customerName: customerName,
         amount: amount,
         paymentDate: paymentDate,
+        outstandingBalance: outstandingBalance,
         note: note,
         requestId: requestId,
       );

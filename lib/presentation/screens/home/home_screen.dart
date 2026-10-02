@@ -17,7 +17,7 @@ class HomeScreen extends StatelessWidget {
     final inventory = context.watch<InventoryProvider>();
     final utang = context.watch<UtangProvider>();
     final payments = context.watch<PaymentProvider>();
-    const todaysSales = 4865.00;
+    final todaysSales = utang.todaysSales;
     final outstanding = payments.remainingFrom(utang.outstanding);
 
     return RefreshIndicator(onRefresh: () async { await inventory.load(); await utang.load(); await payments.load(); }, child: ListView(padding: const EdgeInsets.fromLTRB(20, 18, 20, 28), children: [

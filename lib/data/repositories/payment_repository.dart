@@ -11,24 +11,18 @@ class PaymentRepository {
 
   Future<List<PaymentRecord>> getPayments({
     required String customerId,
-    required String recordedBy,
   }) =>
       _dataSource.getPayments(
         customerId: customerId,
-        recordedBy: recordedBy,
       );
 
-  Future<List<PaymentRecord>> getAllPayments({
-    required String recordedBy,
-  }) =>
-      _dataSource.getAllPayments(recordedBy: recordedBy);
+  Future<List<PaymentRecord>> getAllPayments() =>
+      _dataSource.getAllPayments();
 
   Future<double> getTotalPayments({
     required String customerId,
-    required String recordedBy,
   }) =>
       _dataSource.getTotalPayments(
         customerId: customerId,
-        recordedBy: recordedBy,
       );
 }

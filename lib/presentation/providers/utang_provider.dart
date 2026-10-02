@@ -12,10 +12,32 @@ class UtangProvider extends ChangeNotifier {
   final UtangRepository _repo;
 
   List<Customer> _customers = [];
+  List<UtangTransaction> _transactions = [];
   bool loading = false;
   String? error;
 
   List<Customer> get customers => List.unmodifiable(_customers);
+
+  List<UtangTransaction> get transactionsHistory =>
+      List.unmodifiable(_transactions);
+
+  List<UtangTransaction> get completedSales => List.unmodifiable(
+        _transactions.where((transaction) =>
+            transaction.type == UtangType.credit),
+      );
+
+  double get totalSales => completedSales.fold<double>(
+        0,
+        (total, transaction) => total + transaction.amount,
+      );
+
+  double get todaysSales =>
+      salesBetween(_startOfDay(DateTime.now()), DateTime.now());
+
+  double get currentWeekSales => salesBetween(
+        _startOfWeek(DateTime.now()),
+        DateTime.now(),
+      );
 
   double get outstanding =>
       _customers.fold(
@@ -29,7 +51,10 @@ class UtangProvider extends ChangeNotifier {
 
     try {
       await _repo.recalculate();
-      _customers = await _repo.getCustomers();
+      final customers = await _repo.getCustomers();
+      final transactions = await _repo.getAllTransactions();
+      _customers = customers;
+      _transactions = transactions;
       error = null;
     } catch (_) {
       error = 'Unable to load customer records.';
@@ -47,6 +72,51 @@ class UtangProvider extends ChangeNotifier {
     String id,
   ) {
     return _repo.getTransactionsFor(id);
+  }
+
+  double salesBetween(DateTime start, DateTime end) => completedSales
+      .where((transaction) =>
+          !transaction.createdAt.isBefore(start) &&
+          transaction.createdAt.isBefore(end))
+      .fold<double>(0, (total, transaction) => total + transaction.amount);
+
+  List<double> dailySalesByHour() {
+    final today = _startOfDay(DateTime.now());
+    final values = List<double>.filled(24, 0);
+
+    for (final sale in completedSales) {
+      final localSaleDate = sale.createdAt.toLocal();
+      if (_startOfDay(localSaleDate) == today) {
+        values[localSaleDate.hour] += sale.amount;
+      }
+    }
+
+    return values;
+  }
+
+  List<double> weeklySalesByDay() {
+    final weekStart = _startOfWeek(DateTime.now());
+    final values = List<double>.filled(7, 0);
+
+    for (final sale in completedSales) {
+      final dayOffset = sale.createdAt
+          .toLocal()
+          .difference(weekStart)
+          .inDays;
+      if (dayOffset >= 0 && dayOffset < values.length) {
+        values[dayOffset] += sale.amount;
+      }
+    }
+
+    return values;
+  }
+
+  DateTime _startOfDay(DateTime date) =>
+      DateTime(date.year, date.month, date.day);
+
+  DateTime _startOfWeek(DateTime date) {
+    final start = _startOfDay(date);
+    return start.subtract(Duration(days: start.weekday - DateTime.monday));
   }
 
   Future<double> balance(String id) {

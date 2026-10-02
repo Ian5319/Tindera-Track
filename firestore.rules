@@ -31,21 +31,36 @@ service cloud.firestore {
         && request.resource.data.updatedAt is timestamp;
     }
 
-    match /payment_records/{paymentId} {
-      allow create: if signedIn() && validPaymentDocument(paymentId);
-      // This is an owner-only app: an authenticated owner may read the
-      // payment collection. There are no customer/staff roles to check.
-      // Keeping the read rule at the collection level also allows the
-      // idempotency transaction to check a not-yet-created document.
-      allow read: if signedIn();
+    // User lookup is needed before Firebase Authentication sign-in when the
+    // owner enters a name or phone number instead of an email address.
+    match /users/{userId} {
+      allow read: if true;
+      allow create, update: if signedIn() && request.auth.uid == userId;
+      allow delete: if false;
+    }
 
-      // Payment records are immutable history. The app creates a new record
-      // for every payment and never overwrites an existing payment.
+    // The authenticated owner manages all existing store data. There are no
+    // customer, staff, or payment-management roles in this application.
+    match /products/{documentId} {
+      allow read, write: if signedIn();
+    }
+
+    match /customers/{documentId} {
+      allow read, write: if signedIn();
+    }
+
+    match /utang_transactions/{documentId} {
+      allow read, write: if signedIn();
+    }
+
+    // Payments are separate immutable records. They never modify Utang
+    // transactions or customer history documents.
+    match /payment_records/{paymentId} {
+      allow read: if signedIn();
+      allow create: if signedIn() && validPaymentDocument(paymentId);
       allow update, delete: if false;
     }
 
-    // This is a dedicated payment-project rules file. Any collection other
-    // than payment_records is denied in the payment backend.
     match /{document=**} {
       allow read, write: if false;
     }

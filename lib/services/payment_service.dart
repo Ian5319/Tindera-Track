@@ -42,6 +42,7 @@ class PaymentService {
     required String customerName,
     required double amount,
     required DateTime paymentDate,
+    double? outstandingBalance,
     String? note,
     String? requestId,
   }) {
@@ -50,6 +51,7 @@ class PaymentService {
       customerId: customerId,
       customerName: customerName,
       amount: amount,
+      outstandingBalance: outstandingBalance,
     );
 
     final paymentId = requestId ??
@@ -82,28 +84,26 @@ class PaymentService {
   }
 
   Future<List<PaymentRecord>> getPayments(String customerId) {
-    final recordedBy = _requireUserId();
+    _requireUserId();
     return _guard(
       () => _repository.getPayments(
         customerId: customerId,
-        recordedBy: recordedBy,
       ),
     );
   }
 
   Future<List<PaymentRecord>> getAllPayments() {
-    final recordedBy = _requireUserId();
+    _requireUserId();
     return _guard(
-      () => _repository.getAllPayments(recordedBy: recordedBy),
+      () => _repository.getAllPayments(),
     );
   }
 
   Future<double> getTotalPayments(String customerId) {
-    final recordedBy = _requireUserId();
+    _requireUserId();
     return _guard(
       () => _repository.getTotalPayments(
         customerId: customerId,
-        recordedBy: recordedBy,
       ),
     );
   }
@@ -122,6 +122,7 @@ class PaymentService {
     required String customerId,
     required String customerName,
     required double amount,
+    double? outstandingBalance,
   }) {
     if (customerId.trim().isEmpty || customerName.trim().isEmpty) {
       throw const PaymentValidationException(
@@ -131,6 +132,17 @@ class PaymentService {
     if (!amount.isFinite || amount <= 0) {
       throw const PaymentValidationException(
         'Payment amount must be greater than zero.',
+      );
+    }
+    if (outstandingBalance != null &&
+        (!outstandingBalance.isFinite || outstandingBalance < 0)) {
+      throw const PaymentValidationException(
+        'The customer balance is not valid. Please refresh and try again.',
+      );
+    }
+    if (outstandingBalance != null && amount > outstandingBalance + 0.000001) {
+      throw const PaymentValidationException(
+        'Payment cannot be greater than the remaining balance.',
       );
     }
   }

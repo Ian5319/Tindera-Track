@@ -5,16 +5,12 @@ abstract class PaymentDataSource {
 
   Future<List<PaymentRecord>> getPayments({
     required String customerId,
-    required String recordedBy,
   });
 
-  Future<List<PaymentRecord>> getAllPayments({
-    required String recordedBy,
-  });
+  Future<List<PaymentRecord>> getAllPayments();
 
   Future<double> getTotalPayments({
     required String customerId,
-    required String recordedBy,
   });
 }
 

@@ -94,6 +94,14 @@ class UtangRepository {
     return transactions;
   }
 
+  Future<List<UtangTransaction>> getAllTransactions() async {
+    final snapshot = await _transactions.get();
+    final transactions = snapshot.docs.map(_transactionFromFirestore).toList();
+
+    transactions.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    return transactions;
+  }
+
   Future<void> addTransaction(
     UtangTransaction transaction,
   ) async {

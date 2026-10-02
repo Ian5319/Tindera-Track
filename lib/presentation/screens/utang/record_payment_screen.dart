@@ -137,6 +137,7 @@ class _RecordPaymentScreenState extends State<RecordPaymentScreen> {
             customerName: customer.name,
             amount: amount,
             paymentDate: _paymentDate,
+            outstandingBalance: _remainingBalance,
             note: _note.text,
             requestId: requestId,
           );

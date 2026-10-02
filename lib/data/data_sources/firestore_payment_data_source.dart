@@ -50,9 +50,8 @@ class FirestorePaymentDataSource implements PaymentDataSource {
   @override
   Future<List<PaymentRecord>> getPayments({
     required String customerId,
-    required String recordedBy,
   }) async {
-    final payments = await getAllPayments(recordedBy: recordedBy);
+    final payments = await getAllPayments();
     final customerPayments = payments
         .where((payment) => payment.customerId == customerId)
         .toList();
@@ -64,15 +63,9 @@ class FirestorePaymentDataSource implements PaymentDataSource {
   }
 
   @override
-  Future<List<PaymentRecord>> getAllPayments({
-    required String recordedBy,
-  }) async {
+  Future<List<PaymentRecord>> getAllPayments() async {
     try {
-      // Filtering by recordedBy keeps this query compatible with the
-      // payment project's per-user Firestore rule.
-      final snapshot = await _payments
-          .where('recordedBy', isEqualTo: recordedBy)
-          .get();
+      final snapshot = await _payments.get();
 
       final payments = snapshot.docs.map(_fromSnapshot).toList();
       payments.sort(
@@ -90,11 +83,9 @@ class FirestorePaymentDataSource implements PaymentDataSource {
   @override
   Future<double> getTotalPayments({
     required String customerId,
-    required String recordedBy,
   }) async {
     final payments = await getPayments(
       customerId: customerId,
-      recordedBy: recordedBy,
     );
     return payments.fold<double>(
       0,
