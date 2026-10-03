@@ -12,6 +12,7 @@ import '../../../data/models/utang_transaction.dart';
 import '../../providers/payment_provider.dart';
 import '../../providers/utang_provider.dart';
 import '../../widgets/utang/transaction_item.dart';
+import '../../widgets/utang/payment_edit_dialog.dart';
 
 class CustomerBalanceScreen extends StatefulWidget {
   const CustomerBalanceScreen({
@@ -29,7 +30,6 @@ class CustomerBalanceScreen extends StatefulWidget {
 class _CustomerBalanceScreenState extends State<CustomerBalanceScreen> {
   Customer? _customer;
   List<UtangTransaction> _transactions = [];
-  List<PaymentRecord> _payments = [];
   bool _loading = true;
   String? _error;
 
@@ -63,7 +63,6 @@ class _CustomerBalanceScreenState extends State<CustomerBalanceScreen> {
         setState(() {
           _customer = null;
           _transactions = [];
-          _payments = [];
           _loading = false;
           _error = 'Customer not found.';
         });
@@ -73,7 +72,6 @@ class _CustomerBalanceScreenState extends State<CustomerBalanceScreen> {
       setState(() {
         _customer = customer;
         _transactions = transactions;
-        _payments = payments.paymentsForCustomer(customer.id);
         _loading = false;
       });
     } catch (_) {
@@ -94,6 +92,71 @@ class _CustomerBalanceScreenState extends State<CustomerBalanceScreen> {
 
     if (saved == true && mounted) {
       await _loadData();
+    }
+  }
+
+  Future<void> _editPayment(PaymentRecord payment) async {
+    final draft = await showPaymentEditDialog(context, payment);
+    if (draft == null || !mounted) return;
+
+    try {
+      await context.read<PaymentProvider>().updatePayment(
+            payment: payment,
+            amount: draft.amount,
+            paymentDate: draft.paymentDate,
+            note: draft.note,
+          );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Payment updated successfully.')),
+        );
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(error.toString())),
+        );
+      }
+    }
+  }
+
+  Future<void> _deletePayment(PaymentRecord payment) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Delete payment?'),
+        content: Text(
+          'Delete ${currencyFormatter.format(payment.amount)}? This cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AppColors.danger),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    try {
+      await context.read<PaymentProvider>().deletePayment(payment.id);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Payment deleted successfully.')),
+        );
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(error.toString())),
+        );
+      }
     }
   }
 
@@ -120,8 +183,14 @@ class _CustomerBalanceScreenState extends State<CustomerBalanceScreen> {
     final paymentProvider = context.watch<PaymentProvider>();
     final paymentError = paymentProvider.error;
     final totalPayments = paymentProvider.totalPaymentsFor(customer.id);
+    final payments = paymentProvider.paymentsForCustomer(customer.id);
     final remainingBalance =
         math.max(0, customer.balance - totalPayments).toDouble();
+    final status = remainingBalance <= 0.000001
+        ? 'PAID'
+        : totalPayments > 0
+            ? 'PARTIALLY PAID'
+            : 'UNPAID';
 
     return Scaffold(
       appBar: AppBar(
@@ -162,6 +231,13 @@ class _CustomerBalanceScreenState extends State<CustomerBalanceScreen> {
                           const Text(
                             'Remaining balance',
                             style: TextStyle(fontWeight: FontWeight.w700),
+                          ),
+                          const SizedBox(height: 8),
+                          Text('Total paid: ${currencyFormatter.format(totalPayments)}'),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Status: $status',
+                            style: const TextStyle(fontWeight: FontWeight.w800),
                           ),
                         ],
                       ),
@@ -221,13 +297,19 @@ class _CustomerBalanceScreenState extends State<CustomerBalanceScreen> {
                       style: const TextStyle(color: AppColors.danger),
                     ),
                   )
-                else if (_payments.isEmpty)
+                else if (payments.isEmpty)
                   const Padding(
                     padding: EdgeInsets.all(30),
                     child: Center(child: Text('No payments recorded yet.')),
                   )
                 else
-                  ..._payments.map((payment) => _PaymentRecordTile(payment)),
+                  ...payments.map(
+                    (payment) => _PaymentRecordTile(
+                      payment,
+                      onEdit: () => _editPayment(payment),
+                      onDelete: () => _deletePayment(payment),
+                    ),
+                  ),
               ],
             ),
           ),
@@ -262,9 +344,15 @@ class _CustomerBalanceScreenState extends State<CustomerBalanceScreen> {
 }
 
 class _PaymentRecordTile extends StatelessWidget {
-  const _PaymentRecordTile(this.payment);
+  const _PaymentRecordTile(
+    this.payment, {
+    required this.onEdit,
+    required this.onDelete,
+  });
 
   final PaymentRecord payment;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -289,6 +377,22 @@ class _PaymentRecordTile extends StatelessWidget {
           '${dateFormatter.format(payment.paymentDate)}${payment.note == null ? '' : '\n${payment.note}'}',
         ),
         isThreeLine: payment.note != null,
+        trailing: Wrap(
+          spacing: 0,
+          children: [
+            IconButton(
+              tooltip: 'Edit payment',
+              onPressed: onEdit,
+              icon: const Icon(Icons.edit_outlined),
+            ),
+            IconButton(
+              tooltip: 'Delete payment',
+              onPressed: onDelete,
+              color: AppColors.danger,
+              icon: const Icon(Icons.delete_outline),
+            ),
+          ],
+        ),
       ),
     );
   }

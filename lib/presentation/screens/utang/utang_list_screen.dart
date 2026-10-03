@@ -12,7 +12,13 @@ class UtangListScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final provider = context.watch<UtangProvider>();
     final payments = context.watch<PaymentProvider>();
-    final outstanding = payments.remainingFrom(provider.outstanding);
+    final outstanding = provider.customers.fold<double>(
+      0,
+      (total, customer) => total + payments.remainingForCustomer(
+        customerId: customer.id,
+        utangBalance: customer.balance,
+      ),
+    );
     return Scaffold(
       floatingActionButton: FloatingActionButton.extended(onPressed: () => context.push('/utang/record'), icon: const Icon(Icons.add), label: const Text('Record utang')),
       body: RefreshIndicator(onRefresh: () async { await provider.load(); await payments.load(); }, child: ListView(padding: const EdgeInsets.fromLTRB(16, 12, 16, 100), children: [
@@ -21,7 +27,14 @@ class UtangListScreen extends StatelessWidget {
         Text('Outstanding balance: ${currencyFormatter.format(outstanding)}', style: const TextStyle(fontWeight: FontWeight.w700)),
         const SizedBox(height: 18),
         if (provider.loading && provider.customers.isEmpty) const Center(child: Padding(padding: EdgeInsets.all(30), child: CircularProgressIndicator()))
-        else ...provider.customers.map((customer) => Padding(padding: const EdgeInsets.only(bottom: 10), child: CustomerCard(customer: customer, onTap: () => context.push('/utang/customer/${customer.id}')))),
+        else ...provider.customers.map((customer) => Padding(padding: const EdgeInsets.only(bottom: 10), child: CustomerCard(
+          customer: customer,
+          displayBalance: payments.remainingForCustomer(
+            customerId: customer.id,
+            utangBalance: customer.balance,
+          ),
+          onTap: () => context.push('/utang/customer/${customer.id}'),
+        ))),
       ])));
   }
 }

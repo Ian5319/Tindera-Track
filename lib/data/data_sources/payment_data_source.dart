@@ -3,6 +3,10 @@ import '../models/payment_record.dart';
 abstract class PaymentDataSource {
   Future<PaymentRecord> createPayment(PaymentRecord payment);
 
+  Future<PaymentRecord> updatePayment(PaymentRecord payment);
+
+  Future<void> deletePayment({required String paymentId});
+
   Future<List<PaymentRecord>> getPayments({
     required String customerId,
   });

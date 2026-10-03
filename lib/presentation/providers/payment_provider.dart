@@ -26,12 +26,13 @@ class PaymentProvider extends ChangeNotifier {
         (total, payment) => total + payment.amount,
       );
 
-  List<PaymentRecord> paymentsForCustomer(String customerId) =>
-      List.unmodifiable(
-        _payments
-            .where((payment) => payment.customerId == customerId)
-            .toList(),
-      );
+  List<PaymentRecord> paymentsForCustomer(String customerId) {
+    final payments = _payments
+        .where((payment) => payment.customerId == customerId)
+        .toList()
+      ..sort((a, b) => b.paymentDate.compareTo(a.paymentDate));
+    return List.unmodifiable(payments);
+  }
 
   double totalPaymentsFor(String customerId) => _payments
       .where((payment) => payment.customerId == customerId)
@@ -39,6 +40,14 @@ class PaymentProvider extends ChangeNotifier {
 
   double remainingFrom(double utangBalance) {
     final remaining = utangBalance - totalPayments;
+    return remaining > 0 ? remaining : 0;
+  }
+
+  double remainingForCustomer({
+    required String customerId,
+    required double utangBalance,
+  }) {
+    final remaining = utangBalance - totalPaymentsFor(customerId);
     return remaining > 0 ? remaining : 0;
   }
 
@@ -146,6 +155,66 @@ class PaymentProvider extends ChangeNotifier {
       ];
       error = null;
       return payment;
+    } catch (exception) {
+      error = _messageFor(exception);
+      rethrow;
+    } finally {
+      saving = false;
+      notifyListeners();
+    }
+  }
+
+  Future<PaymentRecord> updatePayment({
+    required PaymentRecord payment,
+    required double amount,
+    required DateTime paymentDate,
+    String? note,
+  }) async {
+    if (saving) {
+      throw const PaymentDuplicateException(
+        'A payment operation is already in progress.',
+      );
+    }
+
+    saving = true;
+    notifyListeners();
+
+    try {
+      final updated = await _service.updatePayment(
+        payment: payment,
+        amount: amount,
+        paymentDate: paymentDate,
+        note: note,
+      );
+      _payments = [
+        updated,
+        ..._payments.where((item) => item.id != updated.id),
+      ];
+      error = null;
+      return updated;
+    } catch (exception) {
+      error = _messageFor(exception);
+      rethrow;
+    } finally {
+      saving = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> deletePayment(String paymentId) async {
+    if (saving) {
+      throw const PaymentDuplicateException(
+        'A payment operation is already in progress.',
+      );
+    }
+
+    saving = true;
+    notifyListeners();
+
+    try {
+      await _service.deletePayment(paymentId);
+      _payments = _payments.where((item) => item.id != paymentId).toList();
+      error = null;
     } catch (exception) {
       error = _messageFor(exception);
       rethrow;

@@ -9,6 +9,12 @@ class PaymentRepository {
   Future<PaymentRecord> createPayment(PaymentRecord payment) =>
       _dataSource.createPayment(payment);
 
+  Future<PaymentRecord> updatePayment(PaymentRecord payment) =>
+      _dataSource.updatePayment(payment);
+
+  Future<void> deletePayment({required String paymentId}) =>
+      _dataSource.deletePayment(paymentId: paymentId);
+
   Future<List<PaymentRecord>> getPayments({
     required String customerId,
   }) =>

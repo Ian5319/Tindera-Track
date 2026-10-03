@@ -11,6 +11,7 @@ service cloud.firestore {
           'id',
           'customerId',
           'customerName',
+          'utangId',
           'amount',
           'paymentDate',
           'note',
@@ -21,6 +22,8 @@ service cloud.firestore {
         && request.resource.data.id == paymentId
         && request.resource.data.customerId is string
         && request.resource.data.customerName is string
+        && (request.resource.data.utangId == null
+            || request.resource.data.utangId is string)
         && request.resource.data.amount is number
         && request.resource.data.amount > 0
         && request.resource.data.paymentDate is timestamp
@@ -39,9 +42,14 @@ service cloud.firestore {
       // idempotency transaction to check a not-yet-created document.
       allow read: if signedIn();
 
-      // Payment records are immutable history. The app creates a new record
-      // for every payment and never overwrites an existing payment.
-      allow update, delete: if false;
+      allow update: if signedIn()
+        && validPaymentDocument(paymentId)
+        && request.resource.data.id == resource.data.id
+        && request.resource.data.customerId == resource.data.customerId
+        && request.resource.data.customerName == resource.data.customerName
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.recordedBy == resource.data.recordedBy;
+      allow delete: if signedIn();
     }
 
     // This is a dedicated payment-project rules file. Any collection other

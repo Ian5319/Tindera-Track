@@ -63,6 +63,7 @@ class PaymentService {
       id: paymentId,
       customerId: customerId.trim(),
       customerName: customerName.trim(),
+      utangId: customerId.trim(),
       amount: amount,
       paymentDate: paymentDate,
       note: note?.trim().isEmpty == true ? null : note?.trim(),
@@ -80,6 +81,38 @@ class PaymentService {
       },
     );
     return future;
+  }
+
+  Future<PaymentRecord> updatePayment({
+    required PaymentRecord payment,
+    required double amount,
+    required DateTime paymentDate,
+    String? note,
+  }) {
+    _validate(
+      customerId: payment.customerId,
+      customerName: payment.customerName,
+      amount: amount,
+    );
+
+    final updatedPayment = payment.copyWith(
+      amount: amount,
+      paymentDate: paymentDate,
+      note: note?.trim().isEmpty == true ? null : note?.trim(),
+      replaceNote: true,
+      updatedAt: DateTime.now(),
+    );
+
+    return _guard(() => _repository.updatePayment(updatedPayment));
+  }
+
+  Future<void> deletePayment(String paymentId) {
+    if (paymentId.trim().isEmpty) {
+      throw const PaymentValidationException(
+        'The payment record is missing its id.',
+      );
+    }
+    return _guard(() => _repository.deletePayment(paymentId: paymentId));
   }
 
   Future<List<PaymentRecord>> getPayments(String customerId) {
@@ -161,6 +194,12 @@ class PaymentService {
         );
       case 'already-exists':
         return PaymentDuplicateException(error.message);
+      case 'exceeds-balance':
+      case 'invalid-payment':
+      case 'invalid-balance':
+      case 'customer-not-found':
+      case 'payment-not-found':
+        return PaymentValidationException(error.message);
       case 'unavailable':
       case 'deadline-exceeded':
       case 'network-request-failed':

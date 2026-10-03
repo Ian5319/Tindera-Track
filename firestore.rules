@@ -11,6 +11,7 @@ service cloud.firestore {
           'id',
           'customerId',
           'customerName',
+          'utangId',
           'amount',
           'paymentDate',
           'note',
@@ -21,6 +22,8 @@ service cloud.firestore {
         && request.resource.data.id == paymentId
         && request.resource.data.customerId is string
         && request.resource.data.customerName is string
+        && (request.resource.data.utangId == null
+            || request.resource.data.utangId is string)
         && request.resource.data.amount is number
         && request.resource.data.amount > 0
         && request.resource.data.paymentDate is timestamp
@@ -53,12 +56,19 @@ service cloud.firestore {
       allow read, write: if signedIn();
     }
 
-    // Payments are separate immutable records. They never modify Utang
-    // transactions or customer history documents.
+    // Payments are separate persistent records. Their CRUD is owner-only
+    // through the app's existing Firebase Authentication session.
     match /payment_records/{paymentId} {
       allow read: if signedIn();
       allow create: if signedIn() && validPaymentDocument(paymentId);
-      allow update, delete: if false;
+      allow update: if signedIn()
+        && validPaymentDocument(paymentId)
+        && request.resource.data.id == resource.data.id
+        && request.resource.data.customerId == resource.data.customerId
+        && request.resource.data.customerName == resource.data.customerName
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.recordedBy == resource.data.recordedBy;
+      allow delete: if signedIn();
     }
 
     match /{document=**} {
