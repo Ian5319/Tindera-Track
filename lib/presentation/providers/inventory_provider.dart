@@ -8,6 +8,7 @@ import '../../data/repositories/sales_repository.dart';
 class InventoryProvider extends ChangeNotifier {
   InventoryProvider(this._repo, this._salesRepo) {
     load();
+    loadSales();
   }
 
   final InventoryRepository _repo;

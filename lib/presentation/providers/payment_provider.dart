@@ -61,7 +61,6 @@ class PaymentProvider extends ChangeNotifier {
       _payments = [];
       error = null;
       loading = false;
-      _notifyAfterProviderUpdate();
       return;
     }
 
@@ -227,12 +226,6 @@ class PaymentProvider extends ChangeNotifier {
   String _messageFor(Object exception) {
     if (exception is PaymentException) return exception.message;
     return 'Unable to manage payment records. Please try again.';
-  }
-
-  void _notifyAfterProviderUpdate() {
-    unawaited(Future<void>.microtask(() {
-      if (!_disposed) notifyListeners();
-    }));
   }
 
   @override
