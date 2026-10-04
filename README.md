@@ -39,6 +39,13 @@ PIN: `1234`
 
 On the first Android run, grant camera permission when prompted. If an emulator has no usable camera, the Add Inventory screen exposes a gallery fallback so the end-to-end flow remains demonstrable.
 
+## Deploy Firestore rules
+
+The payment-history screen reads `payment_records`, which is protected by the
+canonical `firestore.rules` file. After signing in with the Firebase CLI, run
+`firebase deploy --only firestore:rules` from this directory. The checked-in
+`.firebaserc` binds that command to the `tinderatrack-acf1a` project.
+
 ## Phase 1 note
 
 The supplied Phase 1 document says self-service account creation is out of scope for Phase 1, while the requested MVP specification explicitly requires a Create Account screen. This implementation follows the current MVP specification and includes Create Account as a local demo flow.
