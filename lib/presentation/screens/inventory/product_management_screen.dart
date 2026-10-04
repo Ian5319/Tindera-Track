@@ -27,8 +27,10 @@ class _ProductManagementScreenState extends State<ProductManagementScreen> {
   @override
   void initState() {
     super.initState();
-    final provider = context.read<InventoryProvider>();
-    Future<void>.microtask(provider.loadSales);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      context.read<InventoryProvider>().loadSales();
+    });
   }
 
   Product? get _product {
@@ -45,6 +47,11 @@ class _ProductManagementScreenState extends State<ProductManagementScreen> {
       action: add ? 'Add' : 'Remove',
     );
     if (quantity == null || !mounted) return;
+
+    // Let the quantity dialog finish removing its overlay before the
+    // inventory provider starts rebuilding the underlying page.
+    await WidgetsBinding.instance.endOfFrame;
+    if (!mounted) return;
 
     try {
       final provider = context.read<InventoryProvider>();
@@ -70,6 +77,9 @@ class _ProductManagementScreenState extends State<ProductManagementScreen> {
       action: 'Sell',
     );
     if (quantity == null || !mounted) return;
+
+    await WidgetsBinding.instance.endOfFrame;
+    if (!mounted) return;
 
     try {
       final sale = await context.read<InventoryProvider>().recordSale(
@@ -125,9 +135,16 @@ class _ProductManagementScreenState extends State<ProductManagementScreen> {
   }
 
   void _showMessage(String message) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(message)));
+    // The quantity dialog has just been popped. Wait until its OverlayEntry
+    // has been deactivated before mutating the ScaffoldMessenger overlay.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final messenger = ScaffoldMessenger.maybeOf(context);
+      if (messenger == null) return;
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text(message)));
+    });
   }
 
   @override
