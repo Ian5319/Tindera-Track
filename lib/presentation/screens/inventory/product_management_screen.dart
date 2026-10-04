@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -25,13 +26,18 @@ class ProductManagementScreen extends StatefulWidget {
 
 class _ProductManagementScreenState extends State<ProductManagementScreen> {
   @override
-  void initState() {
-    super.initState();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_salesLoadScheduled) return;
+    _salesLoadScheduled = true;
+
+    final provider = context.read<InventoryProvider>();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      context.read<InventoryProvider>().loadSales();
+      if (mounted) unawaited(provider.loadSales());
     });
   }
+
+  bool _salesLoadScheduled = false;
 
   Product? get _product {
     final provider = context.read<InventoryProvider>();
