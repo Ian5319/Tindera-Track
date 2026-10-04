@@ -46,6 +46,7 @@ class PaymentService {
     String? note,
     String? requestId,
   }) {
+    _requireAuthenticated();
     _validate(
       customerId: customerId,
       customerName: customerName,
@@ -89,6 +90,7 @@ class PaymentService {
     required DateTime paymentDate,
     String? note,
   }) {
+    _requireAuthenticated();
     _validate(
       customerId: payment.customerId,
       customerName: payment.customerName,
@@ -107,6 +109,7 @@ class PaymentService {
   }
 
   Future<void> deletePayment(String paymentId) {
+    _requireAuthenticated();
     if (paymentId.trim().isEmpty) {
       throw const PaymentValidationException(
         'The payment record is missing its id.',
@@ -116,6 +119,7 @@ class PaymentService {
   }
 
   Future<List<PaymentRecord>> getPayments(String customerId) {
+    _requireAuthenticated();
     return _guard(
       () => _repository.getPayments(
         customerId: customerId,
@@ -124,12 +128,14 @@ class PaymentService {
   }
 
   Future<List<PaymentRecord>> getAllPayments() {
+    _requireAuthenticated();
     return _guard(
       () => _repository.getAllPayments(),
     );
   }
 
   Future<double> getTotalPayments(String customerId) {
+    _requireAuthenticated();
     return _guard(
       () => _repository.getTotalPayments(
         customerId: customerId,
@@ -140,6 +146,15 @@ class PaymentService {
   String get _recordedBy {
     final userId = _currentUserId()?.trim();
     return userId == null || userId.isEmpty ? 'owner' : userId;
+  }
+
+  void _requireAuthenticated() {
+    final userId = _currentUserId()?.trim();
+    if (userId == null || userId.isEmpty) {
+      throw const PaymentAuthenticationException(
+        'Your Firebase session is not active. Please sign in again.',
+      );
+    }
   }
 
   void _validate({
@@ -188,9 +203,13 @@ class PaymentService {
   PaymentException _mapDataSourceError(PaymentDataSourceException error) {
     switch (error.code) {
       case 'permission-denied':
+        return const PaymentPermissionException(
+          'Firebase denied access to payment records. Please deploy the '
+          'Firestore rules for this Firebase project and sign in again.',
+        );
       case 'unauthenticated':
-        return const PaymentException(
-          'Unable to save the payment. Please try again.',
+        return const PaymentAuthenticationException(
+          'Your Firebase session is not active. Please sign in again.',
         );
       case 'already-exists':
         return PaymentDuplicateException(error.message);
@@ -227,6 +246,14 @@ class PaymentValidationException extends PaymentException {
 
 class PaymentNetworkException extends PaymentException {
   const PaymentNetworkException(super.message);
+}
+
+class PaymentPermissionException extends PaymentException {
+  const PaymentPermissionException(super.message);
+}
+
+class PaymentAuthenticationException extends PaymentException {
+  const PaymentAuthenticationException(super.message);
 }
 
 class PaymentDuplicateException extends PaymentException {

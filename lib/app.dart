@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'core/themes/app_theme.dart';
 import 'data/repositories/auth_repository.dart';
 import 'data/repositories/inventory_repository.dart';
+import 'data/repositories/sales_repository.dart';
 import 'data/repositories/utang_repository.dart';
 import 'presentation/providers/auth_provider.dart';
 import 'presentation/providers/inventory_provider.dart';
@@ -30,7 +31,12 @@ MultiProvider buildAppProviders(Widget child) {
   return MultiProvider(
     providers: [
       ChangeNotifierProvider(create: (_) => AuthProvider(AuthRepository())),
-      ChangeNotifierProvider(create: (_) => InventoryProvider(InventoryRepository())),
+      ChangeNotifierProvider(
+        create: (_) => InventoryProvider(
+          InventoryRepository(),
+          SalesRepository(),
+        ),
+      ),
       ChangeNotifierProvider(create: (_) => UtangProvider(UtangRepository())),
       ChangeNotifierProxyProvider<AuthProvider, PaymentProvider>(
         create: (_) => PaymentProvider(

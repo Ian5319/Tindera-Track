@@ -48,17 +48,47 @@ class InventoryRepository {
     await _products.doc(id).delete();
   }
 
+  Future<Product> adjustStock({
+    required String productId,
+    required int delta,
+  }) async {
+    if (productId.trim().isEmpty || delta == 0) {
+      throw const InventoryOperationException('Enter a valid stock quantity.');
+    }
+
+    final reference = _products.doc(productId);
+    return _firestore.runTransaction<Product>((transaction) async {
+      final snapshot = await transaction.get(reference);
+      if (!snapshot.exists || snapshot.data() == null) {
+        throw const InventoryOperationException('The product no longer exists.');
+      }
+
+      final product = _productFromSnapshot(snapshot);
+      final nextStock = product.stockQuantity + delta;
+      if (nextStock < 0) {
+        throw InventoryOperationException(
+          'Insufficient stock. Only ${product.stockQuantity} items are available.',
+        );
+      }
+
+      transaction.update(reference, {
+        'stockQuantity': nextStock,
+        'updatedAt': Timestamp.now(),
+      });
+      return product.copyWith(stockQuantity: nextStock);
+    });
+  }
+
   Future<List<Product>> lowStock() async {
     final products = await getAll();
 
     return products.where((p) => p.isLowStock).toList();
   }
 
-  Product _productFromFirestore(
-    QueryDocumentSnapshot<Map<String, dynamic>> doc,
+  Product _productFromSnapshot(
+    DocumentSnapshot<Map<String, dynamic>> doc,
   ) {
-    final data = doc.data();
-
+    final data = doc.data()!;
     final createdAt = data['createdAt'];
 
     return Product(
@@ -73,4 +103,17 @@ class InventoryRepository {
           : DateTime.now(),
     );
   }
+
+  Product _productFromFirestore(
+    QueryDocumentSnapshot<Map<String, dynamic>> doc,
+  ) => _productFromSnapshot(doc);
+}
+
+class InventoryOperationException implements Exception {
+  const InventoryOperationException(this.message);
+
+  final String message;
+
+  @override
+  String toString() => message;
 }

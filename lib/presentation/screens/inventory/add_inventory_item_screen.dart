@@ -12,8 +12,7 @@ import '../../providers/inventory_provider.dart';
 import '../../widgets/common/custom_button.dart';
 
 class AddInventoryItemScreen extends StatefulWidget {
-  const AddInventoryItemScreen({super.key, this.product});
-  final Product? product;
+  const AddInventoryItemScreen({super.key});
   @override
   State<AddInventoryItemScreen> createState() => _AddInventoryItemScreenState();
 }
@@ -31,19 +30,10 @@ class _AddInventoryItemScreenState extends State<AddInventoryItemScreen> {
   String? _cameraError;
   bool _saving = false;
 
-  bool get isEditing => widget.product != null;
-
   @override
   void initState() {
     super.initState();
-    final p = widget.product;
-    if (p != null) {
-      _name.text = p.name; _price.text = p.price.toStringAsFixed(2); _stock.text = p.stockQuantity.toString(); _threshold.text = p.threshold.toString();
-      if (p.photoUrl != null) _captured = XFile(p.photoUrl!);
-      _cameraLoading = false;
-    } else {
-      _initCamera();
-    }
+    _initCamera();
   }
 
   Future<void> _initCamera() async {
@@ -68,7 +58,6 @@ class _AddInventoryItemScreenState extends State<AddInventoryItemScreen> {
   }
 
   Future<void> _save() async {
-    if (_captured == null) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Take a product photo first.'))); return; }
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
     final price = Validators.parseMoney(_price.text);
@@ -84,17 +73,17 @@ class _AddInventoryItemScreenState extends State<AddInventoryItemScreen> {
     setState(() => _saving = true);
     try {
       final product = Product(
-        id: widget.product?.id ?? 'p${DateTime.now().microsecondsSinceEpoch}',
+        id: 'p${DateTime.now().microsecondsSinceEpoch}',
         name: _name.text.trim(),
         price: price,
         stockQuantity: stock,
         threshold: threshold,
         photoUrl: _captured?.path,
-        createdAt: widget.product?.createdAt ?? DateTime.now(),
+        createdAt: DateTime.now(),
       );
       await context.read<InventoryProvider>().saveProduct(product);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(isEditing ? 'Inventory item updated.' : 'Item added to inventory.')));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Item added to inventory.')));
       context.pop();
     } catch (_) {
       if (mounted) {
@@ -117,14 +106,14 @@ class _AddInventoryItemScreenState extends State<AddInventoryItemScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(isEditing ? 'Edit Inventory Item' : 'Add Inventory Item')),
+      appBar: AppBar(title: const Text('Add Inventory Item')),
       body: Form(
         key: _formKey,
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 10, 16, 24),
           children: [
             _cameraPane(),
-            if (_captured != null) ...[
+            ...[
               const SizedBox(height: 20),
               const Text('Product details', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 19)),
               const SizedBox(height: 12),
@@ -142,7 +131,7 @@ class _AddInventoryItemScreenState extends State<AddInventoryItemScreen> {
               const SizedBox(height: 14),
               TextFormField(controller: _threshold, validator: (v) => Validators.integer(v, 'Low-stock threshold'), keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Low-stock threshold', helperText: 'Alert when stock is at or below this number.')),
               const SizedBox(height: 22),
-              CustomButton(label: isEditing ? 'Save Changes' : 'Save Item', icon: Icons.save_outlined, onPressed: _save, loading: _saving),
+              CustomButton(label: 'Save Item', icon: Icons.save_outlined, onPressed: _save, loading: _saving),
             ],
           ],
         ),

@@ -4,6 +4,7 @@ abstract final class RouteNames {
   static const home = '/home';
   static const inventory = '/inventory';
   static const addInventory = '/inventory/add';
+  static const productManagement = '/inventory/product/:id';
   static const utang = '/utang';
   static const recordUtang = '/utang/record';
   static const customer = '/utang/customer';

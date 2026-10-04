@@ -181,7 +181,6 @@ class FirestorePaymentDataSource implements PaymentDataSource {
         'id': payment.id,
         'customerId': payment.customerId,
         'customerName': payment.customerName,
-        'utangId': payment.utangId,
         'amount': payment.amount,
         'paymentDate': Timestamp.fromDate(payment.paymentDate),
         'note': payment.note,

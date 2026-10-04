@@ -6,34 +6,6 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function validPaymentDocument(paymentId) {
-      return request.resource.data.keys().hasOnly([
-          'id',
-          'customerId',
-          'customerName',
-          'utangId',
-          'amount',
-          'paymentDate',
-          'note',
-          'recordedBy',
-          'createdAt',
-          'updatedAt'
-        ])
-        && request.resource.data.id == paymentId
-        && request.resource.data.customerId is string
-        && request.resource.data.customerName is string
-        && (request.resource.data.utangId == null
-            || request.resource.data.utangId is string)
-        && request.resource.data.amount is number
-        && request.resource.data.amount > 0
-        && request.resource.data.paymentDate is timestamp
-        && (request.resource.data.note == null
-            || request.resource.data.note is string)
-        && request.resource.data.recordedBy is string
-        && request.resource.data.createdAt is timestamp
-        && request.resource.data.updatedAt is timestamp;
-    }
-
     // User lookup is needed before Firebase Authentication sign-in when the
     // owner enters a name or phone number instead of an email address.
     match /users/{userId} {
@@ -56,19 +28,13 @@ service cloud.firestore {
       allow read, write: if signedIn();
     }
 
-    // Payments are separate persistent records. Their CRUD is owner-only
-    // through the app's existing Firebase Authentication session.
+    // Payments are stored separately from Utang transactions.
     match /payment_records/{paymentId} {
-      allow read: if signedIn();
-      allow create: if signedIn() && validPaymentDocument(paymentId);
-      allow update: if signedIn()
-        && validPaymentDocument(paymentId)
-        && request.resource.data.id == resource.data.id
-        && request.resource.data.customerId == resource.data.customerId
-        && request.resource.data.customerName == resource.data.customerName
-        && request.resource.data.createdAt == resource.data.createdAt
-        && request.resource.data.recordedBy == resource.data.recordedBy;
-      allow delete: if signedIn();
+      allow read, write: if signedIn();
+    }
+
+    match /sales/{saleId} {
+      allow read, write: if signedIn();
     }
 
     match /{document=**} {

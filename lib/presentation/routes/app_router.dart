@@ -8,6 +8,7 @@ import '../screens/auth/signup_screen.dart';
 import '../screens/home/home_screen.dart';
 import '../screens/inventory/inventory_list_screen.dart';
 import '../screens/inventory/add_inventory_item_screen.dart';
+import '../screens/inventory/product_management_screen.dart';
 import '../screens/utang/record_utang_screen.dart';
 import '../screens/utang/customer_balance_screen.dart';
 import '../screens/utang/record_payment_screen.dart';
@@ -40,7 +41,14 @@ class AppRouter {
             GoRoute(path: RouteNames.reports, builder: (_, __) => const ReportsScreen()),
           ],
         ),
-        GoRoute(path: RouteNames.addInventory, builder: (context, state) => AddInventoryItemScreen(product: state.extra is Product ? state.extra as Product : null)),
+        GoRoute(path: RouteNames.addInventory, builder: (_, __) => const AddInventoryItemScreen()),
+        GoRoute(
+          path: RouteNames.productManagement,
+          builder: (_, state) => ProductManagementScreen(
+            productId: state.pathParameters['id']!,
+            product: state.extra is Product ? state.extra as Product : null,
+          ),
+        ),
         GoRoute(path: RouteNames.recordUtang, builder: (_, __) => const RecordUtangScreen()),
         GoRoute(path: '${RouteNames.customer}/:id', builder: (_, state) => CustomerBalanceScreen(customerId: state.pathParameters['id']!)),
         GoRoute(
