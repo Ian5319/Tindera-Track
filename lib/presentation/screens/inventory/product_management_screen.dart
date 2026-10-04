@@ -27,9 +27,8 @@ class _ProductManagementScreenState extends State<ProductManagementScreen> {
   @override
   void initState() {
     super.initState();
-    Future<void>.microtask(
-      () => context.read<InventoryProvider>().loadSales(),
-    );
+    final provider = context.read<InventoryProvider>();
+    Future<void>.microtask(provider.loadSales);
   }
 
   Product? get _product {
