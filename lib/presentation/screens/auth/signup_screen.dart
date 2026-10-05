@@ -30,8 +30,6 @@ class _SignupScreenState extends State<SignupScreen> {
     if (auth.error != null) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(auth.error!)));
       auth.clearError();
-    } else {
-      context.go('/home');
     }
   }
 

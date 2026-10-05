@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../providers/inventory_provider.dart';
-import 'add_inventory_item_screen.dart';
-import 'product_management_screen.dart';
 import '../../widgets/common/loading_indicator.dart';
 import '../../widgets/common/error_widget.dart';
 import '../../widgets/inventory/product_list_tile.dart';
@@ -22,11 +21,7 @@ class _InventoryListScreenState extends State<InventoryListScreen> {
     final items = provider.items.where((p) => p.name.toLowerCase().contains(_query.toLowerCase().trim())).toList();
     return Scaffold(
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => Navigator.of(context).push(
-          MaterialPageRoute<void>(
-            builder: (_) => const AddInventoryItemScreen(),
-          ),
-        ),
+        onPressed: () => context.push('/inventory/add'),
         icon: const Icon(Icons.add),
         label: const Text('Add item'),
       ),
@@ -43,13 +38,9 @@ class _InventoryListScreenState extends State<InventoryListScreen> {
             padding: const EdgeInsets.only(bottom: 10),
             child: ProductListTile(
               product: product,
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute<void>(
-                  builder: (_) => ProductManagementScreen(
-                    productId: product.id,
-                    product: product,
-                  ),
-                ),
+              onTap: () => context.push(
+                '/inventory/product/${product.id}',
+                extra: product,
               ),
             ),
           ),

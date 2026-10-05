@@ -36,27 +36,54 @@ class AppRouter {
           builder: (context, state, child) => MainShell(location: state.uri.path, child: child),
           routes: [
             GoRoute(path: RouteNames.home, builder: (_, __) => const HomeScreen()),
-            GoRoute(path: RouteNames.inventory, builder: (_, __) => const InventoryListScreen()),
-            GoRoute(path: RouteNames.utang, builder: (_, __) => const UtangListScreen()),
+            GoRoute(
+              path: RouteNames.inventory,
+              builder: (_, __) => const InventoryListScreen(),
+              routes: [
+                GoRoute(
+                  path: 'add',
+                  builder: (_, __) => const AddInventoryItemScreen(),
+                ),
+                GoRoute(
+                  path: 'product/:id',
+                  builder: (_, state) => ProductManagementScreen(
+                    productId: state.pathParameters['id']!,
+                    product: state.extra is Product
+                        ? state.extra as Product
+                        : null,
+                  ),
+                ),
+              ],
+            ),
+            GoRoute(
+              path: RouteNames.utang,
+              builder: (_, __) => const UtangListScreen(),
+              routes: [
+                GoRoute(
+                  path: 'record',
+                  builder: (_, __) => const RecordUtangScreen(),
+                ),
+                GoRoute(
+                  path: 'customer/:id',
+                  builder: (_, state) => CustomerBalanceScreen(
+                    customerId: state.pathParameters['id']!,
+                  ),
+                  routes: [
+                    GoRoute(
+                      path: 'payment',
+                      builder: (_, state) => RecordPaymentScreen(
+                        customerId: state.pathParameters['id']!,
+                        customer: state.extra is Customer
+                            ? state.extra as Customer
+                            : null,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
             GoRoute(path: RouteNames.reports, builder: (_, __) => const ReportsScreen()),
           ],
-        ),
-        GoRoute(path: RouteNames.addInventory, builder: (_, __) => const AddInventoryItemScreen()),
-        GoRoute(
-          path: RouteNames.productManagement,
-          builder: (_, state) => ProductManagementScreen(
-            productId: state.pathParameters['id']!,
-            product: state.extra is Product ? state.extra as Product : null,
-          ),
-        ),
-        GoRoute(path: RouteNames.recordUtang, builder: (_, __) => const RecordUtangScreen()),
-        GoRoute(path: '${RouteNames.customer}/:id', builder: (_, state) => CustomerBalanceScreen(customerId: state.pathParameters['id']!)),
-        GoRoute(
-          path: RouteNames.recordPayment,
-          builder: (_, state) => RecordPaymentScreen(
-            customerId: state.pathParameters['id']!,
-            customer: state.extra is Customer ? state.extra as Customer : null,
-          ),
         ),
       ],
     );

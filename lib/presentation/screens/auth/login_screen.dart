@@ -49,8 +49,6 @@ class _LoginScreenState extends State<LoginScreen> {
       );
 
       auth.clearError();
-    } else {
-      context.go('/home');
     }
   }
 
