@@ -91,38 +91,10 @@ class _ProductManagementScreenState extends State<ProductManagementScreen> {
     required String title,
     required String action,
   }) async {
-    final controller = TextEditingController();
-    final quantity = await showDialog<int>(
+    return showDialog<int>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(title),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          keyboardType: TextInputType.number,
-          decoration: const InputDecoration(
-            labelText: 'Quantity',
-            prefixIcon: Icon(Icons.numbers),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () {
-              final value = int.tryParse(controller.text.trim());
-              if (value == null || value <= 0) return;
-              Navigator.of(dialogContext).pop(value);
-            },
-            child: Text(action),
-          ),
-        ],
-      ),
+      builder: (_) => _QuantityDialog(title: title, action: action),
     );
-    controller.dispose();
-    return quantity;
   }
 
   void _showMessage(String message) {
@@ -230,6 +202,64 @@ class _ProductManagementScreenState extends State<ProductManagementScreen> {
             ),
         ],
       ),
+    );
+  }
+}
+
+class _QuantityDialog extends StatefulWidget {
+  const _QuantityDialog({required this.title, required this.action});
+
+  final String title;
+  final String action;
+
+  @override
+  State<_QuantityDialog> createState() => _QuantityDialogState();
+}
+
+class _QuantityDialogState extends State<_QuantityDialog> {
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final value = int.tryParse(_controller.text.trim());
+    if (value == null || value <= 0) return;
+    Navigator.of(context).pop(value);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(widget.title),
+      content: TextField(
+        controller: _controller,
+        autofocus: true,
+        keyboardType: TextInputType.number,
+        decoration: const InputDecoration(
+          labelText: 'Quantity',
+          prefixIcon: Icon(Icons.numbers),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: _submit,
+          child: Text(widget.action),
+        ),
+      ],
     );
   }
 }
