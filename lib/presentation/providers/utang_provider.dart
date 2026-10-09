@@ -75,9 +75,11 @@ class UtangProvider extends ChangeNotifier {
   }
 
   double salesBetween(DateTime start, DateTime end) => completedSales
-      .where((transaction) =>
-          !transaction.createdAt.isBefore(start) &&
-          transaction.createdAt.isBefore(end))
+      .where((transaction) {
+        final localCreatedAt = transaction.createdAt.toLocal();
+        return !localCreatedAt.isBefore(start) &&
+            localCreatedAt.isBefore(end);
+      })
       .fold<double>(0, (total, transaction) => total + transaction.amount);
 
   List<double> dailySalesByHour() {
@@ -127,6 +129,18 @@ class UtangProvider extends ChangeNotifier {
     UtangTransaction tx,
   ) async {
     await _repo.addTransaction(tx);
+    await load();
+  }
+
+  Future<void> deletePaidCustomer({
+    required String customerId,
+    required double remainingBalance,
+  }) async {
+    if (!remainingBalance.isFinite || remainingBalance > 0.000001) {
+      throw ArgumentError('Only fully paid Utang records can be deleted.');
+    }
+
+    await _repo.deleteCustomer(customerId);
     await load();
   }
 

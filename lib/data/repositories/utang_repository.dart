@@ -39,6 +39,17 @@ class UtangRepository {
     return _customerFromFirestore(doc);
   }
 
+  Future<void> deleteCustomer(String id) async {
+    final customerId = id.trim();
+    if (customerId.isEmpty) {
+      throw ArgumentError('Customer id cannot be empty.');
+    }
+
+    // Keep the related transactions and payments for reporting/history. The
+    // customer is removed only from the active Utang list.
+    await _customers.doc(customerId).delete();
+  }
+
   // NEW: Create a customer manually.
   Future<Customer> createCustomer({
     required String name,

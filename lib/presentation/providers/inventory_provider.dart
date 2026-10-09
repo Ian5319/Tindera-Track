@@ -26,10 +26,56 @@ class InventoryProvider extends ChangeNotifier {
   List<Product> get lowStockItems =>
       _items.where((p) => p.isLowStock).toList();
 
+  double get totalSales => _sales.fold<double>(
+        0,
+        (total, sale) => total + sale.totalAmount,
+      );
+
+  double get todaysSales =>
+      salesBetween(_startOfDay(DateTime.now()), DateTime.now());
+
   List<SaleRecord> salesForProduct(String productId) => _sales
       .where((sale) => sale.productId == productId)
       .toList()
     ..sort((a, b) => b.soldAt.compareTo(a.soldAt));
+
+  double salesBetween(DateTime start, DateTime end) => _sales
+      .where((sale) {
+        final localSaleDate = sale.soldAt.toLocal();
+        return !localSaleDate.isBefore(start) &&
+            localSaleDate.isBefore(end);
+      })
+      .fold<double>(0, (total, sale) => total + sale.totalAmount);
+
+  List<double> dailySalesByHour() {
+    final today = _startOfDay(DateTime.now());
+    final values = List<double>.filled(24, 0);
+
+    for (final sale in _sales) {
+      final localSaleDate = sale.soldAt.toLocal();
+      if (_startOfDay(localSaleDate) == today) {
+        values[localSaleDate.hour] += sale.totalAmount;
+      }
+    }
+
+    return values;
+  }
+
+  List<double> weeklySalesByDay() {
+    final weekStart = _startOfWeek(DateTime.now());
+    final values = List<double>.filled(7, 0);
+
+    for (final sale in _sales) {
+      final localSaleDate = sale.soldAt.toLocal();
+      final dayOffset =
+          _startOfDay(localSaleDate).difference(weekStart).inDays;
+      if (dayOffset >= 0 && dayOffset < values.length) {
+        values[dayOffset] += sale.totalAmount;
+      }
+    }
+
+    return values;
+  }
 
   Future<void> load() async {
     loading = true;
@@ -88,6 +134,14 @@ class InventoryProvider extends ChangeNotifier {
       salesLoading = false;
       notifyListeners();
     }
+  }
+
+  DateTime _startOfDay(DateTime date) =>
+      DateTime(date.year, date.month, date.day);
+
+  DateTime _startOfWeek(DateTime date) {
+    final start = _startOfDay(date);
+    return start.subtract(Duration(days: start.weekday - DateTime.monday));
   }
 
   Future<void> deleteProduct(String id) async {

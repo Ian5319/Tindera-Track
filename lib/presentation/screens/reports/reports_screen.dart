@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/utils/formatters.dart';
+import '../../providers/inventory_provider.dart';
 import '../../providers/payment_provider.dart';
 import '../../providers/utang_provider.dart';
 
@@ -24,12 +25,13 @@ class _ReportsScreenState extends State<ReportsScreen> {
   @override
   Widget build(BuildContext context) {
     final payments = context.watch<PaymentProvider>();
+    final inventory = context.watch<InventoryProvider>();
     final utang = context.watch<UtangProvider>();
     final data = _isWeekly
-        ? utang.weeklySalesByDay()
-        : utang.dailySalesByHour();
+        ? _combineSales(inventory.weeklySalesByDay(), utang.weeklySalesByDay())
+        : _combineSales(inventory.dailySalesByHour(), utang.dailySalesByHour());
     final labels = _isWeekly ? _weeklyLabels : _dailyLabels;
-    final totalSales = utang.totalSales;
+    final totalSales = inventory.totalSales + utang.totalSales;
     final outstanding = payments.remainingFrom(utang.outstanding);
     return ListView(padding: const EdgeInsets.fromLTRB(16, 12, 16, 24), children: [
       Text('Reports', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900)),
@@ -46,6 +48,13 @@ class _ReportsScreenState extends State<ReportsScreen> {
         
       ].map((item) => Card(child: ListTile(leading: CircleAvatar(backgroundColor: AppColors.accent.withValues(alpha: .25), child: Text(item.$2.toString())), title: Text(item.$1, style: const TextStyle(fontWeight: FontWeight.w700)), trailing: Text(item.$3, style: const TextStyle(fontWeight: FontWeight.w800))))),
     ]);
+  }
+
+  List<double> _combineSales(List<double> first, List<double> second) {
+    return List<double>.generate(
+      first.length,
+      (index) => first[index] + second[index],
+    );
   }
 
   Widget _summaryCard(String title, String value, IconData icon, Color color) => Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Icon(icon, color: color), const SizedBox(height: 12), Text(title, style: const TextStyle(fontWeight: FontWeight.w700)), const SizedBox(height: 5), FittedBox(child: Text(value, style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: color)))])));
