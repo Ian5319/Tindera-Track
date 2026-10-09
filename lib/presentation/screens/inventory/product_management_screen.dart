@@ -79,7 +79,7 @@ class _ProductManagementScreenState extends State<ProductManagementScreen> {
           );
       if (mounted) {
         _showMessage(
-          'Sale recorded: ${currencyFormatter.format(sale.totalAmount)}.',
+          'Sale recorded: ${currencyFormatter.format(sale.calculatedTotalAmount)}.',
         );
       }
     } catch (error) {
@@ -191,7 +191,7 @@ class _ProductManagementScreenState extends State<ProductManagementScreen> {
                     ),
                   ),
                   title: Text(
-                    '${sale.quantity} sold · ${currencyFormatter.format(sale.totalAmount)}',
+                    '${sale.quantity} sold · ${currencyFormatter.format(sale.calculatedTotalAmount)}',
                     style: const TextStyle(fontWeight: FontWeight.w700),
                   ),
                   subtitle: Text(

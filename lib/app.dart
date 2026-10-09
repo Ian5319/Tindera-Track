@@ -50,13 +50,23 @@ MultiProvider buildAppProviders(Widget child) {
   return MultiProvider(
     providers: [
       ChangeNotifierProvider(create: (_) => AuthProvider(AuthRepository())),
-      ChangeNotifierProvider(
+      ChangeNotifierProxyProvider<AuthProvider, InventoryProvider>(
         create: (_) => InventoryProvider(
           InventoryRepository(),
           SalesRepository(),
         ),
+        update: (_, auth, inventory) {
+          inventory!.setAuthenticated(auth.isAuthenticated);
+          return inventory;
+        },
       ),
-      ChangeNotifierProvider(create: (_) => UtangProvider(UtangRepository())),
+      ChangeNotifierProxyProvider<AuthProvider, UtangProvider>(
+        create: (_) => UtangProvider(UtangRepository()),
+        update: (_, auth, utang) {
+          utang!.setAuthenticated(auth.isAuthenticated);
+          return utang;
+        },
+      ),
       ChangeNotifierProxyProvider<AuthProvider, PaymentProvider>(
         create: (_) => PaymentProvider(
           PaymentService.forCurrentFirebaseApp(),

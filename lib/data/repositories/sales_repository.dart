@@ -55,6 +55,13 @@ class SalesRepository {
         );
       }
 
+      final totalAmount = price * quantity;
+      if (!totalAmount.isFinite) {
+        throw const InventoryOperationException(
+          'The sale total is outside the allowed range.',
+        );
+      }
+
       final soldAt = DateTime.now();
       final sale = SaleRecord(
         id: saleReference.id,
@@ -62,7 +69,7 @@ class SalesRepository {
         productName: productName,
         quantity: quantity,
         sellingPrice: price,
-        totalAmount: price * quantity,
+        totalAmount: totalAmount,
         soldAt: soldAt,
       );
 
@@ -81,7 +88,7 @@ class SalesRepository {
         'productName': sale.productName,
         'quantity': sale.quantity,
         'sellingPrice': sale.sellingPrice,
-        'totalAmount': sale.totalAmount,
+        'totalAmount': sale.calculatedTotalAmount,
         'soldAt': Timestamp.fromDate(sale.soldAt),
       };
 
@@ -90,13 +97,21 @@ class SalesRepository {
   ) {
     final data = doc.data();
     final soldAt = data['soldAt'];
+    final quantity = (data['quantity'] as num?)?.toInt() ?? 0;
+    final sellingPrice = (data['sellingPrice'] as num?)?.toDouble() ?? 0;
+    final calculatedTotalAmount = quantity * sellingPrice;
     return SaleRecord(
       id: data['id'] as String? ?? doc.id,
       productId: data['productId'] as String? ?? '',
       productName: data['productName'] as String? ?? '',
-      quantity: (data['quantity'] as num?)?.toInt() ?? 0,
-      sellingPrice: (data['sellingPrice'] as num?)?.toDouble() ?? 0,
-      totalAmount: (data['totalAmount'] as num?)?.toDouble() ?? 0,
+      quantity: quantity,
+      sellingPrice: sellingPrice,
+      totalAmount: calculatedTotalAmount.isFinite &&
+              quantity > 0 &&
+              sellingPrice.isFinite &&
+              sellingPrice > 0
+          ? calculatedTotalAmount
+          : 0,
       soldAt: soldAt is Timestamp ? soldAt.toDate() : DateTime.now(),
     );
   }

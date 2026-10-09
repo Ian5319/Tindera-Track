@@ -16,4 +16,12 @@ class SaleRecord {
   final double sellingPrice;
   final double totalAmount;
   final DateTime soldAt;
+
+  double get calculatedTotalAmount {
+    final total = quantity * sellingPrice;
+    if (quantity <= 0 || !sellingPrice.isFinite || sellingPrice <= 0) {
+      return 0;
+    }
+    return total.isFinite ? total : 0;
+  }
 }

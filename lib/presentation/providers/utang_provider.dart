@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 
 import '../../data/models/customer.dart';
@@ -5,9 +7,7 @@ import '../../data/models/utang_transaction.dart';
 import '../../data/repositories/utang_repository.dart';
 
 class UtangProvider extends ChangeNotifier {
-  UtangProvider(this._repo) {
-    load();
-  }
+  UtangProvider(this._repo);
 
   final UtangRepository _repo;
 
@@ -15,6 +15,9 @@ class UtangProvider extends ChangeNotifier {
   List<UtangTransaction> _transactions = [];
   bool loading = false;
   String? error;
+  bool _authenticated = false;
+  int _authGeneration = 0;
+  bool _disposed = false;
 
   List<Customer> get customers => List.unmodifiable(_customers);
 
@@ -45,7 +48,33 @@ class UtangProvider extends ChangeNotifier {
         (total, customer) => total + customer.balance,
       );
 
+  void setAuthenticated(bool authenticated) {
+    if (_authenticated == authenticated) return;
+
+    _authenticated = authenticated;
+    final generation = ++_authGeneration;
+
+    if (!authenticated) {
+      _customers = [];
+      _transactions = [];
+      error = null;
+      loading = false;
+      notifyListeners();
+      return;
+    }
+
+    unawaited(Future<void>.microtask(() async {
+      if (_disposed || !_authenticated || generation != _authGeneration) {
+        return;
+      }
+      await load();
+    }));
+  }
+
   Future<void> load() async {
+    if (!_authenticated) return;
+
+    final generation = _authGeneration;
     loading = true;
     notifyListeners();
 
@@ -53,14 +82,20 @@ class UtangProvider extends ChangeNotifier {
       await _repo.recalculate();
       final customers = await _repo.getCustomers();
       final transactions = await _repo.getAllTransactions();
-      _customers = customers;
-      _transactions = transactions;
-      error = null;
+      if (_authenticated && generation == _authGeneration) {
+        _customers = customers;
+        _transactions = transactions;
+        error = null;
+      }
     } catch (_) {
-      error = 'Unable to load customer records.';
+      if (_authenticated && generation == _authGeneration) {
+        error = 'Unable to load customer records.';
+      }
     } finally {
-      loading = false;
-      notifyListeners();
+      if (_authenticated && generation == _authGeneration) {
+        loading = false;
+        notifyListeners();
+      }
     }
   }
 
@@ -157,5 +192,11 @@ class UtangProvider extends ChangeNotifier {
     await load();
 
     return customer;
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
   }
 }
