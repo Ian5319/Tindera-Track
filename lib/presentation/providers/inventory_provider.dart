@@ -115,6 +115,27 @@ class InventoryProvider extends ChangeNotifier {
     return values;
   }
 
+  List<double> weeklySalesByWeek({int weeks = 5}) {
+    if (weeks <= 0) return [];
+    final values = List<double>.filled(weeks, 0);
+
+    final currentWeekStart = _startOfWeek(DateTime.now());
+    final firstWeekStart = currentWeekStart.subtract(
+      Duration(days: DateTime.daysPerWeek * (weeks - 1)),
+    );
+
+    for (final sale in _sales) {
+      final saleWeekStart = _startOfWeek(sale.soldAt.toLocal());
+      final weekIndex =
+          saleWeekStart.difference(firstWeekStart).inDays ~/ DateTime.daysPerWeek;
+      if (weekIndex >= 0 && weekIndex < values.length) {
+        values[weekIndex] += sale.calculatedTotalAmount;
+      }
+    }
+
+    return values;
+  }
+
   Future<void> load() async {
     if (!_authenticated) return;
 
@@ -199,7 +220,7 @@ class InventoryProvider extends ChangeNotifier {
 
   DateTime _startOfWeek(DateTime date) {
     final start = _startOfDay(date);
-    return start.subtract(Duration(days: start.weekday % DateTime.daysPerWeek));
+    return start.subtract(Duration(days: start.weekday - DateTime.monday));
   }
 
   Future<void> deleteProduct(String id) async {

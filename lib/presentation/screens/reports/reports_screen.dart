@@ -16,19 +16,35 @@ class _ReportsScreenState extends State<ReportsScreen> {
   bool _isWeekly = false;
 
   static const _dailyLabels = [
-    'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun',
+    'Mon',
+    'Tue',
+    'Wed',
+    'Thu',
+    'Fri',
+    'Sat',
+    'Sun',
   ];
-  static const _weeklyLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  static const _weeklyLabels = [
+    'Week 1',
+    'Week 2',
+    'Week 3',
+    'Week 4',
+    'Week 5',
+  ];
 
   @override
   Widget build(BuildContext context) {
     final payments = context.watch<PaymentProvider>();
     final inventory = context.watch<InventoryProvider>();
     final utang = context.watch<UtangProvider>();
-    final dailySales =
-        _combineSales(inventory.salesByWeekday(), utang.salesByWeekday());
-    final weeklySales =
-        _combineSales(inventory.weeklySalesByDay(), utang.weeklySalesByDay());
+    final dailySales = _combineSales(
+      inventory.salesByWeekday(),
+      utang.salesByWeekday(),
+    );
+    final weeklySales = _combineSales(
+      inventory.weeklySalesByWeek(weeks: _weeklyLabels.length),
+      utang.weeklySalesByWeek(weeks: _weeklyLabels.length),
+    );
     final data = _isWeekly ? weeklySales : dailySales;
     final labels = _isWeekly ? _weeklyLabels : _dailyLabels;
     final totalSales = inventory.totalSales + utang.totalSales;
@@ -52,7 +68,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
   List<double> _combineSales(List<double> first, List<double> second) {
     return List<double>.generate(
-      first.length,
+      first.length < second.length ? first.length : second.length,
       (index) => first[index] + second[index],
     );
   }
@@ -71,18 +87,23 @@ class SalesBarChartPainter extends CustomPainter {
     final trackPaint = Paint()..color = AppColors.primary.withValues(alpha: .10);
     final gridPaint = Paint()..color = Colors.black12;
     final textPainter = TextPainter(textDirection: TextDirection.ltr);
-    final maxValue = data.isEmpty ? 0.0 : data.reduce((a, b) => a > b ? a : b);
+    final count = data.length < labels.length ? data.length : labels.length;
+    final visibleData = data.take(count).toList();
+    final maxValue = visibleData.isEmpty
+        ? 0.0
+        : visibleData.reduce((a, b) => a > b ? a : b);
     const left = 8.0, bottom = 28.0, top = 12.0;
     final chartH = size.height - bottom - top;
     const gap = 8.0;
-    final barW = (size.width - left - gap * (data.length - 1)) / data.length;
+    if (count == 0) return;
+    final barW = (size.width - left - gap * (count - 1)) / count;
     final baseY = top + chartH;
     for (var line = 0; line <= 3; line++) {
       final y = top + chartH * line / 3;
       canvas.drawLine(Offset(0, y), Offset(size.width, y), gridPaint);
     }
-    for (var i = 0; i < data.length; i++) {
-      final h = maxValue == 0 ? 0.0 : chartH * (data[i] / maxValue);
+    for (var i = 0; i < count; i++) {
+      final h = maxValue == 0 ? 0.0 : chartH * (visibleData[i] / maxValue);
       final x = left + i * (barW + gap);
       final trackRect = RRect.fromRectAndRadius(
         Rect.fromLTWH(x, top, barW, chartH),

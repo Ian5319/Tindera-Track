@@ -159,12 +159,33 @@ class UtangProvider extends ChangeNotifier {
     return values;
   }
 
+  List<double> weeklySalesByWeek({int weeks = 5}) {
+    if (weeks <= 0) return [];
+    final values = List<double>.filled(weeks, 0);
+
+    final currentWeekStart = _startOfWeek(DateTime.now());
+    final firstWeekStart = currentWeekStart.subtract(
+      Duration(days: DateTime.daysPerWeek * (weeks - 1)),
+    );
+
+    for (final sale in completedSales) {
+      final saleWeekStart = _startOfWeek(sale.createdAt.toLocal());
+      final weekIndex =
+          saleWeekStart.difference(firstWeekStart).inDays ~/ DateTime.daysPerWeek;
+      if (weekIndex >= 0 && weekIndex < values.length) {
+        values[weekIndex] += sale.amount;
+      }
+    }
+
+    return values;
+  }
+
   DateTime _startOfDay(DateTime date) =>
       DateTime(date.year, date.month, date.day);
 
   DateTime _startOfWeek(DateTime date) {
     final start = _startOfDay(date);
-    return start.subtract(Duration(days: start.weekday % DateTime.daysPerWeek));
+    return start.subtract(Duration(days: start.weekday - DateTime.monday));
   }
 
   Future<double> balance(String id) {
