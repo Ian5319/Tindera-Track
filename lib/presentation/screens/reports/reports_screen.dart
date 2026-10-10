@@ -38,12 +38,14 @@ class _ReportsScreenState extends State<ReportsScreen> {
     final inventory = context.watch<InventoryProvider>();
     final utang = context.watch<UtangProvider>();
     final dailySales = _combineSales(
-      inventory.salesByWeekday(),
-      utang.salesByWeekday(),
+      inventory.weeklySalesByDay(),
+      utang.weeklySalesByDay(),
+      length: _dailyLabels.length,
     );
     final weeklySales = _combineSales(
       inventory.weeklySalesByWeek(weeks: _weeklyLabels.length),
       utang.weeklySalesByWeek(weeks: _weeklyLabels.length),
+      length: _weeklyLabels.length,
     );
     final data = _isWeekly ? weeklySales : dailySales;
     final labels = _isWeekly ? _weeklyLabels : _dailyLabels;
@@ -54,7 +56,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
       const SizedBox(height: 16),
       SegmentedButton<bool>(segments: const [ButtonSegment(value: false, label: Text('Daily'), icon: Icon(Icons.today_outlined)), ButtonSegment(value: true, label: Text('Weekly'), icon: Icon(Icons.date_range_outlined))], selected: {_isWeekly}, onSelectionChanged: (value) => setState(() => _isWeekly = value.first)),
       const SizedBox(height: 18),
-      Card(child: Padding(padding: const EdgeInsets.fromLTRB(18, 18, 18, 14), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [const Text('Sales visualization', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18)), const SizedBox(height: 10), SizedBox(height: 240, child: CustomPaint(painter: SalesBarChartPainter(data: data, labels: labels)))]))),
+      Card(child: Padding(padding: const EdgeInsets.fromLTRB(18, 18, 18, 14), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [const Text('Sales visualization', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18)), const SizedBox(height: 10), SizedBox(width: double.infinity, height: 240, child: CustomPaint(painter: SalesBarChartPainter(data: data, labels: labels)))]))),
       const SizedBox(height: 16),
       Row(children: [Expanded(child: _summaryCard('Total Sales', currencyFormatter.format(totalSales), Icons.point_of_sale_outlined, AppColors.primary)), const SizedBox(width: 12), Expanded(child: _summaryCard('Outstanding Utang', currencyFormatter.format(outstanding), Icons.receipt_long_outlined, AppColors.danger))]),
       const SizedBox(height: 20),
@@ -66,10 +68,16 @@ class _ReportsScreenState extends State<ReportsScreen> {
     ]);
   }
 
-  List<double> _combineSales(List<double> first, List<double> second) {
+  List<double> _combineSales(
+    List<double> first,
+    List<double> second, {
+    required int length,
+  }) {
     return List<double>.generate(
-      first.length < second.length ? first.length : second.length,
-      (index) => first[index] + second[index],
+      length,
+      (index) =>
+          (index < first.length ? first[index] : 0.0) +
+          (index < second.length ? second[index] : 0.0),
     );
   }
 
@@ -84,19 +92,23 @@ class SalesBarChartPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()..color = AppColors.primary;
-    final trackPaint = Paint()..color = AppColors.primary.withValues(alpha: .10);
+    final trackPaint = Paint()..color = AppColors.primary.withValues(alpha: .14);
     final gridPaint = Paint()..color = Colors.black12;
     final textPainter = TextPainter(textDirection: TextDirection.ltr);
-    final count = data.length < labels.length ? data.length : labels.length;
-    final visibleData = data.take(count).toList();
+    final count = labels.length;
+    final visibleData = List<double>.generate(
+      count,
+      (index) => index < data.length ? data[index] : 0,
+    );
     final maxValue = visibleData.isEmpty
         ? 0.0
         : visibleData.reduce((a, b) => a > b ? a : b);
-    const left = 8.0, bottom = 28.0, top = 12.0;
-    final chartH = size.height - bottom - top;
-    const gap = 8.0;
+    const left = 10.0, right = 10.0, bottom = 28.0, top = 12.0;
+    final chartH =
+        (size.height - bottom - top).clamp(0.0, double.infinity).toDouble();
     if (count == 0) return;
-    final barW = (size.width - left - gap * (count - 1)) / count;
+    final slotW = (size.width - left - right) / count;
+    final barW = (slotW * .55).clamp(18.0, 44.0).toDouble();
     final baseY = top + chartH;
     for (var line = 0; line <= 3; line++) {
       final y = top + chartH * line / 3;
@@ -104,7 +116,8 @@ class SalesBarChartPainter extends CustomPainter {
     }
     for (var i = 0; i < count; i++) {
       final h = maxValue == 0 ? 0.0 : chartH * (visibleData[i] / maxValue);
-      final x = left + i * (barW + gap);
+      final centerX = left + slotW * i + slotW / 2;
+      final x = centerX - barW / 2;
       final trackRect = RRect.fromRectAndRadius(
         Rect.fromLTWH(x, top, barW, chartH),
         const Radius.circular(6),
