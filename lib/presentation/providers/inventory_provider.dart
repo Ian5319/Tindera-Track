@@ -188,7 +188,7 @@ class InventoryProvider extends ChangeNotifier {
 
   DateTime _startOfWeek(DateTime date) {
     final start = _startOfDay(date);
-    return start.subtract(Duration(days: start.weekday - DateTime.monday));
+    return start.subtract(Duration(days: start.weekday % DateTime.daysPerWeek));
   }
 
   Future<void> deleteProduct(String id) async {

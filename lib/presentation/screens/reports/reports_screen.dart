@@ -20,7 +20,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
     '8a', '9a', '10a', '11a', '12p', '1p', '2p', '3p',
     '4p', '5p', '6p', '7p', '8p', '9p', '10p', '11p',
   ];
-  static const _weeklyLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  static const _weeklyLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
   @override
   Widget build(BuildContext context) {
