@@ -16,9 +16,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
   bool _isWeekly = false;
 
   static const _dailyLabels = [
-    '12a', '1a', '2a', '3a', '4a', '5a', '6a', '7a',
-    '8a', '9a', '10a', '11a', '12p', '1p', '2p', '3p',
-    '4p', '5p', '6p', '7p', '8p', '9p', '10p', '11p',
+    'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun',
   ];
   static const _weeklyLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -27,9 +25,11 @@ class _ReportsScreenState extends State<ReportsScreen> {
     final payments = context.watch<PaymentProvider>();
     final inventory = context.watch<InventoryProvider>();
     final utang = context.watch<UtangProvider>();
-    final data = _isWeekly
-        ? _combineSales(inventory.weeklySalesByDay(), utang.weeklySalesByDay())
-        : _combineSales(inventory.dailySalesByHour(), utang.dailySalesByHour());
+    final dailySales =
+        _combineSales(inventory.salesByWeekday(), utang.salesByWeekday());
+    final weeklySales =
+        _combineSales(inventory.weeklySalesByDay(), utang.weeklySalesByDay());
+    final data = _isWeekly ? weeklySales : dailySales;
     final labels = _isWeekly ? _weeklyLabels : _dailyLabels;
     final totalSales = inventory.totalSales + utang.totalSales;
     final outstanding = payments.remainingFrom(utang.outstanding);
@@ -68,6 +68,8 @@ class SalesBarChartPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()..color = AppColors.primary;
+    final trackPaint = Paint()..color = AppColors.primary.withValues(alpha: .10);
+    final gridPaint = Paint()..color = Colors.black12;
     final textPainter = TextPainter(textDirection: TextDirection.ltr);
     final maxValue = data.isEmpty ? 0.0 : data.reduce((a, b) => a > b ? a : b);
     const left = 8.0, bottom = 28.0, top = 12.0;
@@ -75,12 +77,20 @@ class SalesBarChartPainter extends CustomPainter {
     const gap = 8.0;
     final barW = (size.width - left - gap * (data.length - 1)) / data.length;
     final baseY = top + chartH;
-    canvas.drawLine(Offset(0, baseY), Offset(size.width, baseY), Paint()..color = Colors.black12);
+    for (var line = 0; line <= 3; line++) {
+      final y = top + chartH * line / 3;
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), gridPaint);
+    }
     for (var i = 0; i < data.length; i++) {
       final h = maxValue == 0 ? 0.0 : chartH * (data[i] / maxValue);
       final x = left + i * (barW + gap);
+      final trackRect = RRect.fromRectAndRadius(
+        Rect.fromLTWH(x, top, barW, chartH),
+        const Radius.circular(6),
+      );
+      canvas.drawRRect(trackRect, trackPaint);
       final rect = RRect.fromRectAndRadius(Rect.fromLTWH(x, baseY - h, barW, h), const Radius.circular(6));
-      canvas.drawRRect(rect, paint);
+      if (h > 0) canvas.drawRRect(rect, paint);
       textPainter.text = TextSpan(text: labels[i], style: const TextStyle(fontSize: 10, color: Colors.black54));
       textPainter.layout();
       textPainter.paint(canvas, Offset(x + (barW - textPainter.width) / 2, baseY + 7));

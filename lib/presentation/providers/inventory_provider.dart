@@ -88,6 +88,17 @@ class InventoryProvider extends ChangeNotifier {
     return values;
   }
 
+  List<double> salesByWeekday() {
+    final values = List<double>.filled(DateTime.daysPerWeek, 0);
+
+    for (final sale in _sales) {
+      final weekdayIndex = sale.soldAt.toLocal().weekday - DateTime.monday;
+      values[weekdayIndex] += sale.calculatedTotalAmount;
+    }
+
+    return values;
+  }
+
   List<double> weeklySalesByDay() {
     final weekStart = _startOfWeek(DateTime.now());
     final values = List<double>.filled(7, 0);
