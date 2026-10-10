@@ -24,6 +24,8 @@ class ProductManagementScreen extends StatefulWidget {
 }
 
 class _ProductManagementScreenState extends State<ProductManagementScreen> {
+  bool _quantityDialogOpen = false;
+
   Product? get _product {
     final provider = context.read<InventoryProvider>();
     return provider.find(widget.productId) ?? widget.product;
@@ -91,10 +93,17 @@ class _ProductManagementScreenState extends State<ProductManagementScreen> {
     required String title,
     required String action,
   }) async {
-    return showDialog<int>(
-      context: context,
-      builder: (_) => _QuantityDialog(title: title, action: action),
-    );
+    if (_quantityDialogOpen || !mounted) return null;
+
+    _quantityDialogOpen = true;
+    try {
+      return await showDialog<int>(
+        context: context,
+        builder: (_) => _QuantityDialog(title: title, action: action),
+      );
+    } finally {
+      _quantityDialogOpen = false;
+    }
   }
 
   void _showMessage(String message) {
@@ -218,6 +227,7 @@ class _QuantityDialog extends StatefulWidget {
 
 class _QuantityDialogState extends State<_QuantityDialog> {
   late final TextEditingController _controller;
+  bool _closing = false;
 
   @override
   void initState() {
@@ -232,9 +242,18 @@ class _QuantityDialogState extends State<_QuantityDialog> {
   }
 
   void _submit() {
+    if (_closing) return;
+
     final value = int.tryParse(_controller.text.trim());
     if (value == null || value <= 0) return;
-    Navigator.of(context).pop(value);
+    _close(value);
+  }
+
+  void _close([int? value]) {
+    if (_closing || !mounted) return;
+
+    _closing = true;
+    Navigator.of(context, rootNavigator: true).pop<int?>(value);
   }
 
   @override
@@ -252,7 +271,7 @@ class _QuantityDialogState extends State<_QuantityDialog> {
       ),
       actions: [
         TextButton(
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: _close,
           child: const Text('Cancel'),
         ),
         FilledButton(
