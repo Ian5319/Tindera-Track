@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 
+import '../../data/models/customer.dart';
 import '../../data/models/payment_record.dart';
 import '../../services/payment_service.dart';
 
@@ -50,6 +51,22 @@ class PaymentProvider extends ChangeNotifier {
     final remaining = utangBalance - totalPaymentsFor(customerId);
     return remaining > 0 ? remaining : 0;
   }
+
+  /// Returns the outstanding balance for the active customer list.
+  ///
+  /// Payment records are retained for reporting after a paid customer is
+  /// deleted from the active Utang list. Summing all payments globally would
+  /// therefore subtract historical payments from unrelated active customers.
+  double remainingOutstanding(Iterable<Customer> customers) =>
+      customers.fold<double>(
+        0.0,
+        (total, customer) =>
+            total +
+            remainingForCustomer(
+              customerId: customer.id,
+              utangBalance: customer.balance,
+            ),
+      );
 
   void setAuthenticated(bool authenticated) {
     if (_authenticated == authenticated) return;

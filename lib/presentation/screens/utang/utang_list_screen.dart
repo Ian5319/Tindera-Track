@@ -63,13 +63,7 @@ class UtangListScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final provider = context.watch<UtangProvider>();
     final payments = context.watch<PaymentProvider>();
-    final outstanding = provider.customers.fold<double>(
-      0,
-      (total, customer) => total + payments.remainingForCustomer(
-        customerId: customer.id,
-        utangBalance: customer.balance,
-      ),
-    );
+    final outstanding = payments.remainingOutstanding(provider.customers);
     return Scaffold(
       floatingActionButton: FloatingActionButton.extended(onPressed: () => context.push('/utang/record'), icon: const Icon(Icons.add), label: const Text('Record utang')),
       body: RefreshIndicator(onRefresh: () async { await provider.load(); await payments.load(); }, child: ListView(padding: const EdgeInsets.fromLTRB(16, 12, 16, 100), children: [

@@ -50,7 +50,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
     final data = _isWeekly ? weeklySales : dailySales;
     final labels = _isWeekly ? _weeklyLabels : _dailyLabels;
     final totalSales = inventory.totalSales + utang.totalSales;
-    final outstanding = payments.remainingFrom(utang.outstanding);
+    final outstanding = payments.remainingOutstanding(utang.customers);
     return ListView(padding: const EdgeInsets.fromLTRB(16, 12, 16, 24), children: [
       Text('Reports', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900)),
       const SizedBox(height: 16),
