@@ -38,6 +38,18 @@ class Validators {
     return ok ? null : 'Enter a valid email address.';
   }
 
+  static String? passwordResetIdentifier(String? value) {
+    final required = requiredField(value, 'Email / username / phone');
+    if (required != null) return required;
+
+    final input = value!.trim();
+    if (input.contains('@')) return email(input);
+    if (input.length < 4) {
+      return 'Enter a valid email, username, or phone number.';
+    }
+    return null;
+  }
+
   static String? money(String? value) {
     final required = requiredField(value, 'Amount');
     if (required != null) return required;

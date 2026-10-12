@@ -41,6 +41,48 @@ class InventoryProvider extends ChangeNotifier {
       .toList()
     ..sort((a, b) => b.soldAt.compareTo(a.soldAt));
 
+  List<(String, int, String)> topSellingProducts({int limit = 5}) {
+    if (limit <= 0) return [];
+
+    final quantitiesByProduct = <String, int>{};
+    final namesByProduct = <String, String>{};
+
+    for (final sale in _sales) {
+      if (sale.quantity <= 0) continue;
+
+      final productName = sale.productName.trim();
+      final productId = sale.productId.trim();
+      final key = productId.isNotEmpty
+          ? productId
+          : productName.toLowerCase();
+      if (key.isEmpty) continue;
+
+      quantitiesByProduct[key] =
+          (quantitiesByProduct[key] ?? 0) + sale.quantity;
+      namesByProduct[key] = productName.isEmpty ? 'Unnamed product' : productName;
+    }
+
+    final ranked = quantitiesByProduct.entries.toList()
+      ..sort((a, b) {
+        final quantityOrder = b.value.compareTo(a.value);
+        if (quantityOrder != 0) return quantityOrder;
+
+        return namesByProduct[a.key]!
+            .toLowerCase()
+            .compareTo(namesByProduct[b.key]!.toLowerCase());
+      });
+
+    return ranked.take(limit).map((entry) {
+      final quantity = entry.value;
+      final unitLabel = quantity == 1 ? 'unit' : 'units';
+      return (
+        namesByProduct[entry.key]!,
+        quantity,
+        '$quantity $unitLabel sold',
+      );
+    }).toList();
+  }
+
   void setAuthenticated(bool authenticated) {
     if (_authenticated == authenticated) return;
 

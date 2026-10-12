@@ -165,6 +165,88 @@ class AuthRepository {
     }
   }
 
+  Future<void> sendPasswordReset(String identifier) async {
+    final normalizedIdentifier = identifier.trim().toLowerCase();
+
+    if (normalizedIdentifier.isEmpty) {
+      throw const AuthException(
+        'Enter the email, username, or phone number for your account.',
+      );
+    }
+
+    try {
+      var email = normalizedIdentifier;
+
+      if (!normalizedIdentifier.contains('@')) {
+        final byPhone = await _firestore
+            .collection('users')
+            .where('phone', isEqualTo: normalizedIdentifier)
+            .limit(1)
+            .get();
+
+        if (byPhone.docs.isNotEmpty) {
+          email = (byPhone.docs.first.data()['email'] as String?)
+                  ?.trim()
+                  .toLowerCase() ??
+              '';
+        } else {
+          final byName = await _firestore
+              .collection('users')
+              .where('nameLowercase', isEqualTo: normalizedIdentifier)
+              .limit(1)
+              .get();
+
+          if (byName.docs.isNotEmpty) {
+            email = (byName.docs.first.data()['email'] as String?)
+                    ?.trim()
+                    .toLowerCase() ??
+                '';
+          } else {
+            throw const AuthException(
+              'We could not find an account with that username or phone number.',
+            );
+          }
+        }
+      }
+
+      if (email.isEmpty) {
+        throw const AuthException(
+          'This account does not have a valid email address for password reset.',
+        );
+      }
+
+      await _auth.sendPasswordResetEmail(email: email);
+    } on AuthException {
+      rethrow;
+    } on firebase_auth.FirebaseAuthException catch (e) {
+      if (e.code == 'user-not-found' || e.code == 'invalid-email') {
+        throw const AuthException(
+          'We could not find an account with that email address.',
+        );
+      }
+
+      if (e.code == 'too-many-requests') {
+        throw const AuthException(
+          'Too many reset requests. Please wait a moment and try again.',
+        );
+      }
+
+      if (e.code == 'network-request-failed') {
+        throw const AuthException(
+          'No internet connection. Check your connection and try again.',
+        );
+      }
+
+      throw AuthException(
+        e.message ?? 'Unable to send the password reset email.',
+      );
+    } catch (_) {
+      throw const AuthException(
+        'Unable to reach the account service. Please try again.',
+      );
+    }
+  }
+
   Future<void> logout() async {
     await _auth.signOut();
   }

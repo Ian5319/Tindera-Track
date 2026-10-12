@@ -52,6 +52,80 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  Future<String?> _askForPasswordResetIdentifier() async {
+    final formKey = GlobalKey<FormState>();
+    final controller = TextEditingController(
+      text: _identifier.text.trim().contains('@') ? _identifier.text.trim() : '',
+    );
+
+    try {
+      return await showDialog<String>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Reset your password'),
+          content: Form(
+            key: formKey,
+            child: TextFormField(
+              controller: controller,
+              autofocus: true,
+              keyboardType: TextInputType.emailAddress,
+              textInputAction: TextInputAction.done,
+              autofillHints: const [AutofillHints.email],
+              validator: Validators.passwordResetIdentifier,
+              onFieldSubmitted: (_) {
+                if (formKey.currentState?.validate() ?? false) {
+                  Navigator.of(dialogContext).pop(controller.text.trim());
+                }
+              },
+              decoration: const InputDecoration(
+                labelText: 'Email, username, or phone number',
+                hintText: 'name@example.com',
+                prefixIcon: Icon(Icons.alternate_email),
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Cancel'),
+            ),
+            FilledButton.icon(
+              onPressed: () {
+                if (formKey.currentState?.validate() ?? false) {
+                  Navigator.of(dialogContext).pop(controller.text.trim());
+                }
+              },
+              icon: const Icon(Icons.send_outlined),
+              label: const Text('Send link'),
+            ),
+          ],
+        ),
+      );
+    } finally {
+      controller.dispose();
+    }
+  }
+
+  Future<void> _forgotPassword() async {
+    final identifier = await _askForPasswordResetIdentifier();
+    if (!mounted || identifier == null) return;
+
+    final auth = context.read<AuthProvider>();
+    await auth.sendPasswordReset(identifier);
+
+    if (!mounted) return;
+
+    final message = auth.error ??
+        'Password reset link sent. Check your email and follow the instructions.';
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+    auth.clearError();
+  }
+
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
@@ -162,15 +236,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   Align(
                     alignment: Alignment.centerRight,
                     child: TextButton(
-                      onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text(
-                              'Password reset is a UI-only flow in this MVP.',
-                            ),
-                          ),
-                        );
-                      },
+                      onPressed: auth.loading ? null : _forgotPassword,
                       child: const Text(
                         'Forgot Password?',
                       ),

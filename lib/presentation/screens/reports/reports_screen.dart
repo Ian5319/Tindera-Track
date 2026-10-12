@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/utils/formatters.dart';
@@ -15,56 +16,108 @@ class ReportsScreen extends StatefulWidget {
 class _ReportsScreenState extends State<ReportsScreen> {
   bool _isWeekly = false;
 
-  static const _dailyLabels = [
-    'Mon',
-    'Tue',
-    'Wed',
-    'Thu',
-    'Fri',
-    'Sat',
-    'Sun',
-  ];
-  static const _weeklyLabels = [
-    'Week 1',
-    'Week 2',
-    'Week 3',
-    'Week 4',
-    'Week 5',
-  ];
+  static const _weeklyPointCount = 5;
+  static final _chartDateFormatter = DateFormat('MMM d');
+  static final _rangeDateFormatter = DateFormat('MMM d, yyyy');
 
   @override
   Widget build(BuildContext context) {
     final payments = context.watch<PaymentProvider>();
     final inventory = context.watch<InventoryProvider>();
     final utang = context.watch<UtangProvider>();
+    final now = DateTime.now();
+    final dailyLabels = _dailyDateLabels(now);
+    final weeklyLabels = _weeklyDateLabels(now);
     final dailySales = _combineSales(
       inventory.weeklySalesByDay(),
       utang.weeklySalesByDay(),
-      length: _dailyLabels.length,
+      length: dailyLabels.length,
     );
     final weeklySales = _combineSales(
-      inventory.weeklySalesByWeek(weeks: _weeklyLabels.length),
-      utang.weeklySalesByWeek(weeks: _weeklyLabels.length),
-      length: _weeklyLabels.length,
+      inventory.weeklySalesByWeek(weeks: weeklyLabels.length),
+      utang.weeklySalesByWeek(weeks: weeklyLabels.length),
+      length: weeklyLabels.length,
     );
     final data = _isWeekly ? weeklySales : dailySales;
-    final labels = _isWeekly ? _weeklyLabels : _dailyLabels;
+    final labels = _isWeekly ? weeklyLabels : dailyLabels;
+    final periodStart = _isWeekly
+        ? _startOfWeek(now).subtract(
+            const Duration(days: DateTime.daysPerWeek * (_weeklyPointCount - 1)),
+          )
+        : _startOfWeek(now);
+    final periodEnd = _startOfWeek(now).add(
+      const Duration(days: DateTime.daysPerWeek - 1),
+    );
+    final periodLabel =
+        '${_rangeDateFormatter.format(periodStart)} – ${_rangeDateFormatter.format(periodEnd)}';
     final totalSales = inventory.totalSales + utang.totalSales;
     final outstanding = payments.remainingOutstanding(utang.customers);
+    final topSellingProducts = inventory.topSellingProducts();
     return ListView(padding: const EdgeInsets.fromLTRB(16, 12, 16, 24), children: [
       Text('Reports', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900)),
       const SizedBox(height: 16),
       SegmentedButton<bool>(segments: const [ButtonSegment(value: false, label: Text('Daily'), icon: Icon(Icons.today_outlined)), ButtonSegment(value: true, label: Text('Weekly'), icon: Icon(Icons.date_range_outlined))], selected: {_isWeekly}, onSelectionChanged: (value) => setState(() => _isWeekly = value.first)),
       const SizedBox(height: 18),
-      Card(child: Padding(padding: const EdgeInsets.fromLTRB(18, 18, 18, 14), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [const Text('Sales visualization', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18)), const SizedBox(height: 10), SizedBox(width: double.infinity, height: 240, child: CustomPaint(painter: SalesBarChartPainter(data: data, labels: labels)))]))),
+      Card(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(18, 18, 18, 14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Sales visualization',
+                style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                _isWeekly ? 'Weekly totals · $periodLabel' : 'Daily totals · $periodLabel',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Colors.black54,
+                    ),
+              ),
+              const SizedBox(height: 10),
+              SizedBox(
+                width: double.infinity,
+                height: 240,
+                child: CustomPaint(
+                  painter: SalesBarChartPainter(data: data, labels: labels),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
       const SizedBox(height: 16),
       Row(children: [Expanded(child: _summaryCard('Total Sales', currencyFormatter.format(totalSales), Icons.point_of_sale_outlined, AppColors.primary)), const SizedBox(width: 12), Expanded(child: _summaryCard('Outstanding Utang', currencyFormatter.format(outstanding), Icons.receipt_long_outlined, AppColors.danger))]),
       const SizedBox(height: 20),
       const Text('Top-Selling Products', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
       const SizedBox(height: 10),
-      ...const [
-        
-      ].map((item) => Card(child: ListTile(leading: CircleAvatar(backgroundColor: AppColors.accent.withValues(alpha: .25), child: Text(item.$2.toString())), title: Text(item.$1, style: const TextStyle(fontWeight: FontWeight.w700)), trailing: Text(item.$3, style: const TextStyle(fontWeight: FontWeight.w800))))),
+      if (topSellingProducts.isEmpty)
+        const Card(
+          child: ListTile(
+            leading: Icon(Icons.inventory_2_outlined),
+            title: Text('No product sales recorded yet.'),
+          ),
+        )
+      else
+        ...topSellingProducts.map(
+          (item) => Card(
+            child: ListTile(
+              leading: CircleAvatar(
+                backgroundColor: AppColors.accent.withValues(alpha: .25),
+                child: Text(item.$2.toString()),
+              ),
+              title: Text(
+                item.$1,
+                style: const TextStyle(fontWeight: FontWeight.w700),
+              ),
+              trailing: Text(
+                item.$3,
+                style: const TextStyle(fontWeight: FontWeight.w800),
+              ),
+            ),
+          ),
+        ),
     ]);
   }
 
@@ -79,6 +132,34 @@ class _ReportsScreenState extends State<ReportsScreen> {
           (index < first.length ? first[index] : 0.0) +
           (index < second.length ? second[index] : 0.0),
     );
+  }
+
+  List<String> _dailyDateLabels(DateTime date) {
+    final start = _startOfWeek(date);
+    return List.generate(
+      DateTime.daysPerWeek,
+      (index) => _chartDateFormatter.format(
+        start.add(Duration(days: index)),
+      ),
+    );
+  }
+
+  List<String> _weeklyDateLabels(DateTime date) {
+    final currentWeekStart = _startOfWeek(date);
+    final firstWeekStart = currentWeekStart.subtract(
+      const Duration(days: DateTime.daysPerWeek * (_weeklyPointCount - 1)),
+    );
+    return List.generate(
+      _weeklyPointCount,
+      (index) => _chartDateFormatter.format(
+        firstWeekStart.add(Duration(days: DateTime.daysPerWeek * index)),
+      ),
+    );
+  }
+
+  DateTime _startOfWeek(DateTime date) {
+    final start = DateTime(date.year, date.month, date.day);
+    return start.subtract(Duration(days: start.weekday - DateTime.monday));
   }
 
   Widget _summaryCard(String title, String value, IconData icon, Color color) => Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Icon(icon, color: color), const SizedBox(height: 12), Text(title, style: const TextStyle(fontWeight: FontWeight.w700)), const SizedBox(height: 5), FittedBox(child: Text(value, style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: color)))])));
