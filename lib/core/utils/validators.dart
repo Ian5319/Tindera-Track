@@ -1,4 +1,8 @@
 class Validators {
+  // Keep amounts within a practical Firestore/UI range and avoid accepting
+  // values that lose precision when converted to a Dart double.
+  static const maxMoney = 1000000000000.0;
+
   static String? requiredField(String? value, [String label = 'This field']) {
     if (value == null || value.trim().isEmpty) return '$label is required.';
     return null;
@@ -69,7 +73,11 @@ class Validators {
     if (!validFormat.hasMatch(input)) return null;
 
     final parsed = double.tryParse(input.replaceAll(',', ''));
-    return parsed != null && parsed.isFinite ? parsed : null;
+    return parsed != null &&
+            parsed.isFinite &&
+            parsed <= maxMoney
+        ? parsed
+        : null;
   }
 
   static String? integer(String? value, [String label = 'Quantity']) {

@@ -89,12 +89,14 @@ class PaymentService {
     required double amount,
     required DateTime paymentDate,
     String? note,
+    double? outstandingBalance,
   }) {
     _requireAuthenticated();
     _validate(
       customerId: payment.customerId,
       customerName: payment.customerName,
       amount: amount,
+      outstandingBalance: outstandingBalance,
     );
 
     final updatedPayment = payment.copyWith(

@@ -99,12 +99,28 @@ class _CustomerBalanceScreenState extends State<CustomerBalanceScreen> {
     final draft = await showPaymentEditDialog(context, payment);
     if (draft == null || !mounted) return;
 
+    final paymentProvider = context.read<PaymentProvider>();
+    final totalPaid = paymentProvider.totalPaymentsFor(payment.customerId);
+    final maximumAmount = math.max(
+      0,
+      (_customer?.balance ?? 0) - totalPaid + payment.amount,
+    ).toDouble();
+    if (draft.amount > maximumAmount + 0.000001) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Payment cannot be greater than the remaining balance.'),
+        ),
+      );
+      return;
+    }
+
     try {
-      await context.read<PaymentProvider>().updatePayment(
+      await paymentProvider.updatePayment(
             payment: payment,
             amount: draft.amount,
             paymentDate: draft.paymentDate,
             note: draft.note,
+            outstandingBalance: maximumAmount,
           );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

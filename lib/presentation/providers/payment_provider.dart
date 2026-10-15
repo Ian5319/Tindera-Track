@@ -78,6 +78,8 @@ class PaymentProvider extends ChangeNotifier {
       _payments = [];
       error = null;
       loading = false;
+      saving = false;
+      notifyListeners();
       return;
     }
 
@@ -185,6 +187,7 @@ class PaymentProvider extends ChangeNotifier {
     required double amount,
     required DateTime paymentDate,
     String? note,
+    double? outstandingBalance,
   }) async {
     if (saving) {
       throw const PaymentDuplicateException(
@@ -201,6 +204,7 @@ class PaymentProvider extends ChangeNotifier {
         amount: amount,
         paymentDate: paymentDate,
         note: note,
+        outstandingBalance: outstandingBalance,
       );
       _payments = [
         updated,

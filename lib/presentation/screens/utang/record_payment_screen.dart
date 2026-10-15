@@ -166,6 +166,14 @@ class _RecordPaymentScreenState extends State<RecordPaymentScreen> {
     final draft = await showPaymentEditDialog(context, payment);
     if (draft == null || !mounted) return;
 
+    // The current payment is already included in total paid. Add it back to
+    // the remaining balance to calculate the maximum valid replacement.
+    final maximumAmount = _remainingBalance + payment.amount;
+    if (draft.amount > maximumAmount + 0.000001) {
+      _showMessage('Payment cannot be greater than the remaining balance.');
+      return;
+    }
+
     setState(() => _busyPaymentId = payment.id);
     try {
       await context.read<PaymentProvider>().updatePayment(
@@ -173,6 +181,7 @@ class _RecordPaymentScreenState extends State<RecordPaymentScreen> {
             amount: draft.amount,
             paymentDate: draft.paymentDate,
             note: draft.note,
+            outstandingBalance: maximumAmount,
           );
       if (mounted) _showMessage('Payment updated successfully.');
     } catch (error) {

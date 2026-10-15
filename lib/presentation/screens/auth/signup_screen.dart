@@ -51,7 +51,7 @@ class _SignupScreenState extends State<SignupScreen> {
       const SizedBox(height: 10),
       Center(child: TextButton(onPressed: () => context.go('/login'), child: const Text('Already have an account? Sign In'))),
       const SizedBox(height: 18),
-      Container(width: double.infinity, padding: const EdgeInsets.all(14), decoration: BoxDecoration(color: AppColors.successBg, borderRadius: BorderRadius.circular(16)), child: const Text('Phase 1 demo stores account data locally in Hive. Use a real backend before production deployment.')),
+      Container(width: double.infinity, padding: const EdgeInsets.all(14), decoration: BoxDecoration(color: AppColors.successBg, borderRadius: BorderRadius.circular(16)), child: const Text('Your account is secured with Firebase Authentication. Keep your password private.')),
     ]))))));
   }
 }

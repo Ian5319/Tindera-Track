@@ -28,11 +28,8 @@ class AuthProvider extends ChangeNotifier with WidgetsBindingObserver {
 
   Future<void> _loadCurrentUser() async {
     try {
-      // Firebase restores its last signed-in user by default. Sessions in this
-      // app must always start from the login screen, so discard that restored
-      // credential before loading the app state.
-      await _repository.logout();
-      _user = null;
+      _user = await _repository.currentUser();
+      if (_user != null) _startSessionTimer();
     } catch (_) {
       _user = null;
     } finally {
@@ -92,9 +89,12 @@ class AuthProvider extends ChangeNotifier with WidgetsBindingObserver {
 
   Future<void> logout() async {
     _stopSessionTimer();
-    await _repository.logout();
-    _user = null;
-    notifyListeners();
+    try {
+      await _repository.logout();
+    } finally {
+      _user = null;
+      notifyListeners();
+    }
   }
 
   /// Records user activity and keeps the session alive while the app is in use.
