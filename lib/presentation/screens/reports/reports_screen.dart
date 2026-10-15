@@ -1,3 +1,5 @@
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -175,7 +177,7 @@ class SalesBarChartPainter extends CustomPainter {
     final paint = Paint()..color = AppColors.primary;
     final trackPaint = Paint()..color = AppColors.primary.withValues(alpha: .14);
     final gridPaint = Paint()..color = Colors.black12;
-    final textPainter = TextPainter(textDirection: TextDirection.ltr);
+    final textPainter = TextPainter(textDirection: ui.TextDirection.ltr);
     final count = labels.length;
     final visibleData = List<double>.generate(
       count,
