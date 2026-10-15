@@ -31,11 +31,26 @@ class _TinderaTrackAppState extends State<TinderaTrackApp> {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp.router(
-      debugShowCheckedModeBanner: false,
-      title: 'TinderaTrack',
-      theme: buildAppTheme(),
-      routerConfig: _router,
+    final auth = context.read<AuthProvider>();
+
+    return Listener(
+      behavior: HitTestBehavior.translucent,
+      onPointerDown: (_) => auth.recordActivity(),
+      onPointerMove: (_) => auth.recordActivity(),
+      onPointerSignal: (_) => auth.recordActivity(),
+      child: Focus(
+        autofocus: true,
+        onKeyEvent: (_, __) {
+          auth.recordActivity();
+          return KeyEventResult.ignored;
+        },
+        child: MaterialApp.router(
+          debugShowCheckedModeBanner: false,
+          title: 'TinderaTrack',
+          theme: buildAppTheme(),
+          routerConfig: _router,
+        ),
+      ),
     );
   }
 

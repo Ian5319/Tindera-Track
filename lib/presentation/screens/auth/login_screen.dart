@@ -53,57 +53,14 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<String?> _askForPasswordResetIdentifier() async {
-    final formKey = GlobalKey<FormState>();
-    final controller = TextEditingController(
-      text: _identifier.text.trim().contains('@') ? _identifier.text.trim() : '',
+    return showDialog<String>(
+      context: context,
+      builder: (_) => _PasswordResetDialog(
+        initialValue: _identifier.text.trim().contains('@')
+            ? _identifier.text.trim()
+            : '',
+      ),
     );
-
-    try {
-      return await showDialog<String>(
-        context: context,
-        builder: (dialogContext) => AlertDialog(
-          title: const Text('Reset your password'),
-          content: Form(
-            key: formKey,
-            child: TextFormField(
-              controller: controller,
-              autofocus: true,
-              keyboardType: TextInputType.emailAddress,
-              textInputAction: TextInputAction.done,
-              autofillHints: const [AutofillHints.email],
-              validator: Validators.passwordResetIdentifier,
-              onFieldSubmitted: (_) {
-                if (formKey.currentState?.validate() ?? false) {
-                  Navigator.of(dialogContext).pop(controller.text.trim());
-                }
-              },
-              decoration: const InputDecoration(
-                labelText: 'Email, username, or phone number',
-                hintText: 'name@example.com',
-                prefixIcon: Icon(Icons.alternate_email),
-              ),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text('Cancel'),
-            ),
-            FilledButton.icon(
-              onPressed: () {
-                if (formKey.currentState?.validate() ?? false) {
-                  Navigator.of(dialogContext).pop(controller.text.trim());
-                }
-              },
-              icon: const Icon(Icons.send_outlined),
-              label: const Text('Send link'),
-            ),
-          ],
-        ),
-      );
-    } finally {
-      controller.dispose();
-    }
   }
 
   Future<void> _forgotPassword() async {
@@ -266,6 +223,72 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _PasswordResetDialog extends StatefulWidget {
+  const _PasswordResetDialog({required this.initialValue});
+
+  final String initialValue;
+
+  @override
+  State<_PasswordResetDialog> createState() => _PasswordResetDialogState();
+}
+
+class _PasswordResetDialogState extends State<_PasswordResetDialog> {
+  final _formKey = GlobalKey<FormState>();
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.initialValue);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    if (!(_formKey.currentState?.validate() ?? false)) return;
+    Navigator.of(context).pop(_controller.text.trim());
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Reset your password'),
+      content: Form(
+        key: _formKey,
+        child: TextFormField(
+          controller: _controller,
+          autofocus: true,
+          keyboardType: TextInputType.emailAddress,
+          textInputAction: TextInputAction.done,
+          autofillHints: const [AutofillHints.email],
+          validator: Validators.passwordResetIdentifier,
+          onFieldSubmitted: (_) => _submit(),
+          decoration: const InputDecoration(
+            labelText: 'Email, username, or phone number',
+            hintText: 'name@example.com',
+            prefixIcon: Icon(Icons.alternate_email),
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        FilledButton.icon(
+          onPressed: _submit,
+          icon: const Icon(Icons.send_outlined),
+          label: const Text('Send link'),
+        ),
+      ],
     );
   }
 }
