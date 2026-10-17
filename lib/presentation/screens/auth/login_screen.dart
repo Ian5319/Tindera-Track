@@ -52,35 +52,32 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  Future<String?> _askForPasswordResetIdentifier() async {
-    return showDialog<String>(
+  Future<bool?> _showPasswordResetDialog() {
+    final auth = context.read<AuthProvider>();
+    return showDialog<bool>(
       context: context,
-      builder: (_) => _PasswordResetDialog(
+      barrierDismissible: false,
+      builder: (_) => PasswordResetDialog(
         initialValue: _identifier.text.trim().contains('@')
             ? _identifier.text.trim()
             : '',
+        sendPasswordReset: auth.sendPasswordReset,
       ),
     );
   }
 
   Future<void> _forgotPassword() async {
-    final identifier = await _askForPasswordResetIdentifier();
-    if (!mounted || identifier == null) return;
+    final sent = await _showPasswordResetDialog();
+    if (!mounted || sent != true) return;
 
-    final auth = context.read<AuthProvider>();
-    await auth.sendPasswordReset(identifier);
-
-    if (!mounted) return;
-
-    final message = auth.error ??
-        'Password reset link sent. Check your email and follow the instructions.';
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
+      const SnackBar(
+        content: Text(
+          'Password reset link sent. Check your email and follow the instructions.',
+        ),
         behavior: SnackBarBehavior.floating,
       ),
     );
-    auth.clearError();
   }
 
   @override
@@ -113,27 +110,19 @@ class _LoginScreenState extends State<LoginScreen> {
                       size: 38,
                     ),
                   ),
-
                   const SizedBox(height: 20),
-
                   Text(
                     AppStrings.appName,
-                    style: Theme.of(context)
-                        .textTheme
-                        .displaySmall
-                        ?.copyWith(
+                    style: Theme.of(context).textTheme.displaySmall?.copyWith(
                           fontWeight: FontWeight.w900,
                           color: AppColors.primaryDark,
                         ),
                   ),
-
                   Text(
                     AppStrings.tagline,
                     style: Theme.of(context).textTheme.bodyLarge,
                   ),
-
                   const SizedBox(height: 32),
-
                   const Text(
                     'Welcome back',
                     style: TextStyle(
@@ -141,15 +130,11 @@ class _LoginScreenState extends State<LoginScreen> {
                       fontWeight: FontWeight.w800,
                     ),
                   ),
-
                   const SizedBox(height: 8),
-
                   const Text(
                     'Sign in to manage your store inventory and customer utang.',
                   ),
-
                   const SizedBox(height: 24),
-
                   TextFormField(
                     controller: _identifier,
                     validator: Validators.phoneOrUsername,
@@ -160,9 +145,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                   ),
-
                   const SizedBox(height: 16),
-
                   TextFormField(
                     controller: _password,
                     validator: Validators.password,
@@ -173,9 +156,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         Icons.lock_outline,
                       ),
                       suffixIcon: IconButton(
-                        tooltip: _obscure
-                            ? 'Show password'
-                            : 'Hide password',
+                        tooltip: _obscure ? 'Show password' : 'Hide password',
                         onPressed: () {
                           setState(() {
                             _obscure = !_obscure;
@@ -189,7 +170,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                   ),
-
                   Align(
                     alignment: Alignment.centerRight,
                     child: TextButton(
@@ -199,16 +179,13 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                   ),
-
                   CustomButton(
                     label: 'Log In',
                     icon: Icons.login,
                     onPressed: _login,
                     loading: auth.loading,
                   ),
-
                   const SizedBox(height: 14),
-
                   Center(
                     child: TextButton(
                       onPressed: () => context.go('/signup'),
@@ -227,18 +204,25 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 }
 
-class _PasswordResetDialog extends StatefulWidget {
-  const _PasswordResetDialog({required this.initialValue});
+class PasswordResetDialog extends StatefulWidget {
+  const PasswordResetDialog({
+    super.key,
+    required this.initialValue,
+    required this.sendPasswordReset,
+  });
 
   final String initialValue;
+  final Future<String?> Function(String identifier) sendPasswordReset;
 
   @override
-  State<_PasswordResetDialog> createState() => _PasswordResetDialogState();
+  State<PasswordResetDialog> createState() => _PasswordResetDialogState();
 }
 
-class _PasswordResetDialogState extends State<_PasswordResetDialog> {
+class _PasswordResetDialogState extends State<PasswordResetDialog> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _controller;
+  bool _sending = false;
+  String? _error;
 
   @override
   void initState() {
@@ -252,9 +236,26 @@ class _PasswordResetDialogState extends State<_PasswordResetDialog> {
     super.dispose();
   }
 
-  void _submit() {
-    if (!(_formKey.currentState?.validate() ?? false)) return;
-    Navigator.of(context).pop(_controller.text.trim());
+  Future<void> _submit() async {
+    if (_sending || !(_formKey.currentState?.validate() ?? false)) return;
+
+    setState(() {
+      _sending = true;
+      _error = null;
+    });
+
+    final error = await widget.sendPasswordReset(_controller.text.trim());
+    if (!mounted) return;
+
+    if (error != null) {
+      setState(() {
+        _sending = false;
+        _error = error;
+      });
+      return;
+    }
+
+    Navigator.of(context).pop(true);
   }
 
   @override
@@ -266,27 +267,37 @@ class _PasswordResetDialogState extends State<_PasswordResetDialog> {
         child: TextFormField(
           controller: _controller,
           autofocus: true,
+          enabled: !_sending,
           keyboardType: TextInputType.emailAddress,
           textInputAction: TextInputAction.done,
           autofillHints: const [AutofillHints.email],
           validator: Validators.passwordResetIdentifier,
-          onFieldSubmitted: (_) => _submit(),
-          decoration: const InputDecoration(
+          onChanged: (_) {
+            if (_error != null) setState(() => _error = null);
+          },
+          onFieldSubmitted: _sending ? null : (_) => _submit(),
+          decoration: InputDecoration(
             labelText: 'Email, username, or phone number',
             hintText: 'name@example.com',
-            prefixIcon: Icon(Icons.alternate_email),
+            prefixIcon: const Icon(Icons.alternate_email),
+            errorText: _error,
           ),
         ),
       ),
       actions: [
         TextButton(
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: _sending ? null : () => Navigator.of(context).pop(false),
           child: const Text('Cancel'),
         ),
         FilledButton.icon(
-          onPressed: _submit,
-          icon: const Icon(Icons.send_outlined),
-          label: const Text('Send link'),
+          onPressed: _sending ? null : _submit,
+          icon: _sending
+              ? const SizedBox.square(
+                  dimension: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Icon(Icons.send_outlined),
+          label: Text(_sending ? 'Sending…' : 'Send link'),
         ),
       ],
     );

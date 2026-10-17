@@ -74,16 +74,12 @@ class AuthProvider extends ChangeNotifier with WidgetsBindingObserver {
     }
   }
 
-  Future<void> sendPasswordReset(String identifier) async {
-    _setLoading(true);
-    _error = null;
-
+  Future<String?> sendPasswordReset(String identifier) async {
     try {
       await _repository.sendPasswordReset(identifier);
+      return null;
     } catch (e) {
-      _error = e.toString().replaceFirst('AuthException: ', '');
-    } finally {
-      _setLoading(false);
+      return e.toString().replaceFirst('AuthException: ', '');
     }
   }
 
