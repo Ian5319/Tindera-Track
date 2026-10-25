@@ -1,51 +1,63 @@
-# TinderaTrack Flutter MVP
+# TinderaTrack
 
-TinderaTrack is a Material 3 Flutter MVP for sari-sari store owners, focused on fast inventory tracking and photo-verified utang records.
+TinderaTrack is a Flutter application for sari-sari store owners. It combines
+inventory, cash-sale recording, customer Utang, payment history, photo evidence,
+and sales reporting in one Firebase-backed product.
 
-## Implemented core journey
+## Product capabilities
 
-1. Firebase Authentication login with an email/password account.
-2. Create Account flow with password validation.
-3. Dashboard: today's sales, low-stock alerts, outstanding utang, quick actions.
-4. Inventory search/filter, low-stock highlighting, add/edit item flow with camera or gallery fallback.
-5. Utang recording with customer selector, live balance preview, and Firestore persistence.
-6. Customer balance/history with charge (+) and payment (-) indicators, plus fixed Record Payment action.
-7. Daily/Weekly reports with custom-painted bar chart, KPI cards, and top-selling products.
-8. Bottom navigation for Home, Inventory, Utang, and Reports.
+- Email/password account creation, login, reset, logout, and idle-session expiry
+- Owner-isolated inventory with product photos, stock adjustment, editing, deletion,
+  low-stock alerts, sale recording, and per-product sales history
+- Customer Utang recording with live balance previews, optional photo evidence,
+  customer search, detailed history, and paid-customer cleanup
+- Payment creation, editing, deletion, partial-payment status, and duplicate-submit
+  protection
+- Dashboard and daily/weekly sales reports backed by live store data
+- Defensive loading, empty, error, retry, and unsupported-platform states
 
-## Storage and packages
+## Documentation
 
-- Provider for state management
-- Firebase Authentication and Cloud Firestore for account and store data
-- Firebase Storage for owner-scoped product photos
-- camera for product capture
-- image_picker for gallery product photos
-- GoRouter for navigation
-- intl for Philippine Peso and date formatting
-- Material 3 styling with warm Filipino/market-inspired orange, green, and amber tones
+- [User manual](USER_MANUAL.md)
+- [Technical documentation](TECHNICAL_DOCUMENTATION.md)
+- [Release testing checklist](TESTING_CHECKLIST.md)
 
-No passwords, PINs, customer records, or business data are stored in Hive. Existing
-Firestore records created before owner isolation was added must be migrated by a
-trusted administrator to include the correct `ownerId` before deploying the new
-rules.
+## Quick start
 
-## Run on Android
+Prerequisites: a compatible Flutter SDK, Android Studio/Android SDK or Xcode,
+and access to the configured Firebase project.
 
-1. Install Flutter and Android Studio/SDK.
-2. Run `flutter pub get`.
-3. Connect an Android emulator or device.
-4. Run `flutter run`.
+```bash
+flutter pub get
+flutter run
+```
 
-On the first Android or iOS camera use, grant camera permission when prompted. If an emulator has no usable camera, the Add Inventory screen exposes a gallery fallback so the end-to-end flow remains demonstrable.
+Firebase is configured for Android, iOS, and Web. The desktop targets display a
+configuration message until desktop Firebase applications are added with the
+FlutterFire CLI.
 
-## Deploy Firestore rules
+## Verification
 
-The payment-history screen reads `payment_records`, which is protected by the
-canonical `firestore.rules` file. Product photos use the checked-in
-`storage.rules`. After signing in with the Firebase CLI, run
-`firebase deploy --only firestore:rules,storage` from this directory. The
-checked-in `.firebaserc` binds that command to the `tinderatrack-acf1a` project.
+```bash
+flutter test --no-pub
+flutter build apk --debug --no-pub
+```
 
-## Phase 1 note
+## Firebase deployment
 
-The supplied Phase 1 document says self-service account creation is out of scope for Phase 1, while the requested MVP specification explicitly requires a Create Account screen. This implementation follows the current MVP specification and includes Create Account as a local demo flow.
+Existing documents created before owner isolation was introduced must first be
+migrated by a trusted administrator so each document has the correct `ownerId`.
+After migration, deploy the checked-in Firestore and Storage rules:
+
+```bash
+firebase deploy --only firestore:rules,storage
+```
+
+Do not deploy `firebase.payment.json` by itself for the main application. The
+canonical configuration is [firebase.json](firebase.json), which uses the complete
+rule set in [firestore.rules](firestore.rules).
+
+Firebase mobile/web API keys in generated client configuration identify the
+Firebase project; they are not service-account secrets. Access control is enforced
+by Firebase Authentication plus the checked-in Firestore and Storage rules. Never
+commit service-account JSON, private keys, or user passwords.

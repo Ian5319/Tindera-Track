@@ -11,26 +11,74 @@ class MediaStorageService {
   Future<String> uploadProductPhoto({
     required String productId,
     required XFile file,
+  }) =>
+      _uploadPhoto(
+        folder: 'products',
+        recordId: productId,
+        file: file,
+        label: 'Product',
+      );
+
+  Future<String> uploadUtangPhoto({
+    required String transactionId,
+    required XFile file,
+  }) =>
+      _uploadPhoto(
+        folder: 'utang',
+        recordId: transactionId,
+        file: file,
+        label: 'Utang',
+      );
+
+  Future<String> _uploadPhoto({
+    required String folder,
+    required String recordId,
+    required XFile file,
+    required String label,
   }) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
       throw StateError('An authenticated owner is required.');
     }
 
+    final normalizedId = recordId.trim();
+    if (normalizedId.isEmpty || normalizedId.contains('/')) {
+      throw ArgumentError('A valid record id is required.');
+    }
+
     final extension = _extension(file.name);
     final reference = _storage.ref(
-      'users/${user.uid}/products/$productId.$extension',
+      'users/${user.uid}/$folder/$normalizedId.$extension',
     );
     final metadata = SettableMetadata(
       contentType: _contentType(extension),
-      customMetadata: {'ownerId': user.uid},
+      customMetadata: {
+        'ownerId': user.uid,
+        'recordId': normalizedId,
+      },
     );
-    final bytes = await file.readAsBytes();
-    if (bytes.length > 5 * 1024 * 1024) {
-      throw StateError('Product photos must be smaller than 5 MB.');
+    final byteLength = await file.length();
+    if (byteLength > 5 * 1024 * 1024) {
+      throw StateError('$label photos must be smaller than 5 MB.');
     }
+    final bytes = await file.readAsBytes();
     await reference.putData(bytes, metadata);
     return reference.getDownloadURL();
+  }
+
+  Future<void> deleteOwnedPhoto(String? downloadUrl) async {
+    if (downloadUrl == null || downloadUrl.trim().isEmpty) return;
+
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      throw StateError('An authenticated owner is required.');
+    }
+
+    final reference = _storage.refFromURL(downloadUrl);
+    if (!reference.fullPath.startsWith('users/${user.uid}/')) {
+      throw StateError('The photo does not belong to the authenticated owner.');
+    }
+    await reference.delete();
   }
 
   String _extension(String name) {

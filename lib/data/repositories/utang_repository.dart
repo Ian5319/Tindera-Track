@@ -5,8 +5,7 @@ import '../models/customer.dart';
 import '../models/utang_transaction.dart';
 
 class UtangRepository {
-  final FirebaseFirestore _firestore =
-      FirebaseFirestore.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   CollectionReference<Map<String, dynamic>> get _customers =>
       _firestore.collection('customers');
@@ -56,13 +55,11 @@ class UtangRepository {
           (balances[transaction.customerId] ?? 0) + signedAmount;
     }
 
-    final customers = customerSnapshot.docs
-        .map((doc) {
-          final customer = _customerFromFirestore(doc);
-          final balance = balances[customer.id] ?? 0;
-          return customer.copyWith(balance: balance < 0 ? 0 : balance);
-        })
-        .toList();
+    final customers = customerSnapshot.docs.map((doc) {
+      final customer = _customerFromFirestore(doc);
+      final balance = balances[customer.id] ?? 0;
+      return customer.copyWith(balance: balance < 0 ? 0 : balance);
+    }).toList();
 
     customers.sort(
       (a, b) => a.name.toLowerCase().compareTo(
@@ -102,18 +99,21 @@ class UtangRepository {
     String phone = '',
   }) async {
     final normalizedName = name.trim();
-    if (normalizedName.isEmpty) {
-      throw ArgumentError('A customer must have a name.');
+    final normalizedPhone = phone.trim();
+    if (normalizedName.isEmpty || normalizedName.length > 200) {
+      throw ArgumentError('A customer name must contain 1 to 200 characters.');
+    }
+    if (normalizedPhone.length > 32) {
+      throw ArgumentError('A phone number cannot exceed 32 characters.');
     }
 
-    final id =
-        'c${DateTime.now().microsecondsSinceEpoch}';
+    final id = 'c${DateTime.now().microsecondsSinceEpoch}';
 
     final customer = Customer(
       id: id,
       ownerId: _ownerId,
       name: normalizedName,
-      phone: phone.trim(),
+      phone: normalizedPhone,
       balance: 0,
       createdAt: DateTime.now(),
     );
@@ -147,9 +147,7 @@ class UtangRepository {
         )
         .get();
 
-    final transactions = snapshot.docs
-        .map(_transactionFromFirestore)
-        .toList();
+    final transactions = snapshot.docs.map(_transactionFromFirestore).toList();
 
     transactions.sort(
       (a, b) => b.createdAt.compareTo(a.createdAt),
@@ -174,7 +172,9 @@ class UtangRepository {
         !transaction.amount.isFinite ||
         transaction.amount <= 0 ||
         transaction.amount > 1000000000000 ||
-        (transaction.note?.length ?? 0) > 2000) {
+        (transaction.note?.length ?? 0) > 2000 ||
+        (transaction.photoUrl != null &&
+            !transaction.photoUrl!.startsWith('https://'))) {
       throw ArgumentError('Transaction values are outside the allowed range.');
     }
 
@@ -186,7 +186,8 @@ class UtangRepository {
     if (transaction.type == UtangType.payment) {
       final balance = await currentBalance(transaction.customerId);
       if (transaction.amount > balance) {
-        throw ArgumentError('Payment cannot be greater than the current balance.');
+        throw ArgumentError(
+            'Payment cannot be greater than the current balance.');
       }
     }
 
@@ -202,14 +203,12 @@ class UtangRepository {
         transaction.createdAt,
       ),
     });
-
   }
 
   Future<double> currentBalance(
     String customerId,
   ) async {
-    final transactions =
-        await getTransactionsFor(customerId);
+    final transactions = await getTransactionsFor(customerId);
 
     final balance = transactions.fold<double>(
       0,
@@ -235,12 +234,8 @@ class UtangRepository {
       ownerId: data['ownerId'] is String ? data['ownerId'] as String : '',
       name: data['name'] is String ? data['name'] as String : '',
       phone: data['phone'] is String ? data['phone'] as String : '',
-      balance: data['balance'] is num
-          ? (data['balance'] as num).toDouble()
-          : 0,
-      createdAt: createdAt is Timestamp
-          ? createdAt.toDate()
-          : DateTime.now(),
+      balance: data['balance'] is num ? (data['balance'] as num).toDouble() : 0,
+      createdAt: createdAt is Timestamp ? createdAt.toDate() : DateTime.now(),
     );
   }
 
@@ -249,30 +244,25 @@ class UtangRepository {
   ) {
     final data = doc.data();
 
-    final typeString = data['type'] is String ? data['type'] as String : 'credit';
+    final typeString =
+        data['type'] is String ? data['type'] as String : 'credit';
 
-    final type =
-        typeString == UtangType.payment.name
-            ? UtangType.payment
-            : UtangType.credit;
+    final type = typeString == UtangType.payment.name
+        ? UtangType.payment
+        : UtangType.credit;
 
     final createdAt = data['createdAt'];
 
     return UtangTransaction(
       id: doc.id,
       ownerId: data['ownerId'] is String ? data['ownerId'] as String : '',
-      customerId: data['customerId'] is String
-          ? data['customerId'] as String
-          : '',
-      amount: data['amount'] is num
-          ? (data['amount'] as num).toDouble()
-          : 0,
+      customerId:
+          data['customerId'] is String ? data['customerId'] as String : '',
+      amount: data['amount'] is num ? (data['amount'] as num).toDouble() : 0,
       type: type,
       photoUrl: data['photoUrl'] is String ? data['photoUrl'] as String : null,
       note: data['note'] is String ? data['note'] as String : null,
-      createdAt: createdAt is Timestamp
-          ? createdAt.toDate()
-          : DateTime.now(),
+      createdAt: createdAt is Timestamp ? createdAt.toDate() : DateTime.now(),
     );
   }
 }

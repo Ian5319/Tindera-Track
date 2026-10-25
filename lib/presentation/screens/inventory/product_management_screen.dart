@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../data/models/product.dart';
+import '../../../services/media_storage_service.dart';
 import '../../providers/inventory_provider.dart';
+import '../../widgets/inventory/product_edit_dialog.dart';
 
 class ProductManagementScreen extends StatefulWidget {
   const ProductManagementScreen({
@@ -23,10 +26,75 @@ class ProductManagementScreen extends StatefulWidget {
 
 class _ProductManagementScreenState extends State<ProductManagementScreen> {
   bool _quantityDialogOpen = false;
+  bool _busy = false;
+  final _mediaStorage = MediaStorageService();
 
   Product? get _product {
     final provider = context.read<InventoryProvider>();
     return provider.find(widget.productId) ?? widget.product;
+  }
+
+  Future<void> _editProduct(Product product) async {
+    if (_busy) return;
+
+    final updated = await showProductEditDialog(context, product);
+    if (updated == null || !mounted) return;
+
+    setState(() => _busy = true);
+    try {
+      await context.read<InventoryProvider>().saveProduct(updated);
+      if (mounted) _showMessage('Product details updated.');
+    } catch (error) {
+      if (mounted) _showMessage(error.toString());
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _deleteProduct(Product product) async {
+    if (_busy) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Delete product?'),
+        content: Text(
+          'Delete ${product.name} from inventory? Existing sales history will be retained for reports.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AppColors.danger),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _busy = true);
+    try {
+      await context.read<InventoryProvider>().deleteProduct(product.id);
+      try {
+        await _mediaStorage.deleteOwnedPhoto(product.photoUrl);
+      } catch (_) {
+        // The inventory record is already deleted; photo cleanup is best effort.
+      }
+      if (!mounted) return;
+      context.go('/inventory');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Product deleted.')),
+      );
+    } catch (error) {
+      if (mounted) {
+        setState(() => _busy = false);
+        _showMessage(error.toString());
+      }
+    }
   }
 
   Future<void> _adjustStock({required bool add}) async {
@@ -52,7 +120,8 @@ class _ProductManagementScreenState extends State<ProductManagementScreen> {
         await provider.removeStock(product.id, quantity);
       }
       if (mounted) {
-        _showMessage(add ? 'Stock added successfully.' : 'Stock removed successfully.');
+        _showMessage(
+            add ? 'Stock added successfully.' : 'Stock removed successfully.');
       }
     } catch (error) {
       if (mounted) _showMessage(error.toString());
@@ -130,7 +199,27 @@ class _ProductManagementScreenState extends State<ProductManagementScreen> {
 
     final sales = provider.salesForProduct(product.id);
     return Scaffold(
-      appBar: AppBar(title: const Text('Product Management')),
+      appBar: AppBar(
+        title: const Text('Product Management'),
+        actions: [
+          IconButton(
+            tooltip: 'Edit product',
+            onPressed: _busy ? null : () => _editProduct(product),
+            icon: const Icon(Icons.edit_outlined),
+          ),
+          IconButton(
+            tooltip: 'Delete product',
+            onPressed: _busy ? null : () => _deleteProduct(product),
+            icon: const Icon(Icons.delete_outline),
+          ),
+        ],
+        bottom: _busy
+            ? const PreferredSize(
+                preferredSize: Size.fromHeight(3),
+                child: LinearProgressIndicator(minHeight: 3),
+              )
+            : null,
+      ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
         children: [

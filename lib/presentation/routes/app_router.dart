@@ -20,23 +20,54 @@ import 'route_names.dart';
 class AppRouter {
   static GoRouter build(AuthProvider auth) {
     return GoRouter(
-      initialLocation: auth.isAuthenticated ? RouteNames.home : RouteNames.login,
+      initialLocation:
+          auth.isAuthenticated ? RouteNames.home : RouteNames.login,
       refreshListenable: auth,
       redirect: (context, state) {
         final isAuth = auth.isAuthenticated;
         final path = state.uri.path;
-        final onAuthPage = path == RouteNames.login || path == RouteNames.signup;
+        final onAuthPage =
+            path == RouteNames.login || path == RouteNames.signup;
         if (!isAuth && !onAuthPage) return RouteNames.login;
         if (isAuth && onAuthPage) return RouteNames.home;
         return null;
       },
+      errorBuilder: (context, state) => Scaffold(
+        appBar: AppBar(title: const Text('Page not found')),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.route_outlined, size: 56),
+                const SizedBox(height: 12),
+                const Text(
+                  'This page is unavailable.',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+                ),
+                const SizedBox(height: 12),
+                FilledButton.icon(
+                  onPressed: () => context.go(RouteNames.home),
+                  icon: const Icon(Icons.home_outlined),
+                  label: const Text('Return home'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
       routes: [
-        GoRoute(path: RouteNames.login, builder: (_, __) => const LoginScreen()),
-        GoRoute(path: RouteNames.signup, builder: (_, __) => const SignupScreen()),
+        GoRoute(
+            path: RouteNames.login, builder: (_, __) => const LoginScreen()),
+        GoRoute(
+            path: RouteNames.signup, builder: (_, __) => const SignupScreen()),
         ShellRoute(
-          builder: (context, state, child) => MainShell(location: state.uri.path, child: child),
+          builder: (context, state, child) =>
+              MainShell(location: state.uri.path, child: child),
           routes: [
-            GoRoute(path: RouteNames.home, builder: (_, __) => const HomeScreen()),
+            GoRoute(
+                path: RouteNames.home, builder: (_, __) => const HomeScreen()),
             GoRoute(
               path: RouteNames.inventory,
               builder: (_, __) => const InventoryListScreen(),
@@ -49,9 +80,8 @@ class AppRouter {
                   path: 'product/:id',
                   builder: (_, state) => ProductManagementScreen(
                     productId: state.pathParameters['id']!,
-                    product: state.extra is Product
-                        ? state.extra as Product
-                        : null,
+                    product:
+                        state.extra is Product ? state.extra as Product : null,
                   ),
                 ),
               ],
@@ -83,7 +113,9 @@ class AppRouter {
                 ),
               ],
             ),
-            GoRoute(path: RouteNames.reports, builder: (_, __) => const ReportsScreen()),
+            GoRoute(
+                path: RouteNames.reports,
+                builder: (_, __) => const ReportsScreen()),
           ],
         ),
       ],
@@ -136,14 +168,31 @@ class MainShell extends StatelessWidget {
       bottomNavigationBar: NavigationBar(
         selectedIndex: index,
         onDestinationSelected: (value) {
-          const paths = [RouteNames.home, RouteNames.inventory, RouteNames.utang, RouteNames.reports];
+          const paths = [
+            RouteNames.home,
+            RouteNames.inventory,
+            RouteNames.utang,
+            RouteNames.reports
+          ];
           context.go(paths[value]);
         },
         destinations: const [
-          NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home), label: 'Home'),
-          NavigationDestination(icon: Icon(Icons.inventory_2_outlined), selectedIcon: Icon(Icons.inventory_2), label: 'Inventory'),
-          NavigationDestination(icon: Icon(Icons.receipt_long_outlined), selectedIcon: Icon(Icons.receipt_long), label: 'Utang'),
-          NavigationDestination(icon: Icon(Icons.bar_chart_outlined), selectedIcon: Icon(Icons.bar_chart), label: 'Reports'),
+          NavigationDestination(
+              icon: Icon(Icons.home_outlined),
+              selectedIcon: Icon(Icons.home),
+              label: 'Home'),
+          NavigationDestination(
+              icon: Icon(Icons.inventory_2_outlined),
+              selectedIcon: Icon(Icons.inventory_2),
+              label: 'Inventory'),
+          NavigationDestination(
+              icon: Icon(Icons.receipt_long_outlined),
+              selectedIcon: Icon(Icons.receipt_long),
+              label: 'Utang'),
+          NavigationDestination(
+              icon: Icon(Icons.bar_chart_outlined),
+              selectedIcon: Icon(Icons.bar_chart),
+              label: 'Reports'),
         ],
       ),
     );

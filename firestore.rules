@@ -26,6 +26,13 @@ service cloud.firestore {
       return value == null || (value is string && value.size() <= maximum);
     }
 
+    function optionalHttpsUrl(value) {
+      return value == null
+        || (value is string
+          && value.size() <= 2048
+          && value.matches('https://.*'));
+    }
+
     function validProduct(productId) {
       let data = request.resource.data;
       return data.keys().hasAll([
@@ -48,7 +55,7 @@ service cloud.firestore {
         && data.threshold is int
         && data.threshold >= 0
         && data.threshold <= 1000000000
-        && optionalText(data.photoUrl, 2048)
+        && optionalHttpsUrl(data.photoUrl)
         && data.createdAt is timestamp
         && data.updatedAt is timestamp
         && data.createdAt <= request.time
@@ -93,7 +100,7 @@ service cloud.firestore {
         && data.amount > 0
         && data.amount <= 1000000000000
         && (data.type == 'credit' || data.type == 'payment')
-        && optionalText(data.photoUrl, 2048)
+        && optionalHttpsUrl(data.photoUrl)
         && optionalText(data.note, 2000)
         && data.createdAt is timestamp
         && data.createdAt <= request.time;
