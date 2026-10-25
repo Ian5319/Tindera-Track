@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import '../models/sale_record.dart';
 import 'inventory_repository.dart';
@@ -15,8 +16,18 @@ class SalesRepository {
   CollectionReference<Map<String, dynamic>> get _products =>
       _firestore.collection('products');
 
+  String get _ownerId {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null || uid.isEmpty) {
+      throw StateError('An authenticated owner is required.');
+    }
+    return uid;
+  }
+
   Future<List<SaleRecord>> getAll() async {
-    final snapshot = await _sales.get();
+    final snapshot = await _sales
+        .where('ownerId', isEqualTo: _ownerId)
+        .get();
     final records = snapshot.docs.map(_saleFromSnapshot).toList()
       ..sort((a, b) => b.soldAt.compareTo(a.soldAt));
     return records;
@@ -40,6 +51,9 @@ class SalesRepository {
       }
 
       final data = productSnapshot.data()!;
+      if (data['ownerId'] != _ownerId) {
+        throw const InventoryOperationException('The product is not available.');
+      }
       final stock = (data['stockQuantity'] as num?)?.toInt() ?? 0;
       if (quantity > stock) {
         throw InventoryOperationException(
@@ -65,6 +79,7 @@ class SalesRepository {
       final soldAt = DateTime.now();
       final sale = SaleRecord(
         id: saleReference.id,
+        ownerId: _ownerId,
         productId: productReference.id,
         productName: productName,
         quantity: quantity,
@@ -84,6 +99,7 @@ class SalesRepository {
 
   Map<String, dynamic> _toMap(SaleRecord sale) => {
         'id': sale.id,
+        'ownerId': sale.ownerId,
         'productId': sale.productId,
         'productName': sale.productName,
         'quantity': sale.quantity,
@@ -97,13 +113,20 @@ class SalesRepository {
   ) {
     final data = doc.data();
     final soldAt = data['soldAt'];
-    final quantity = (data['quantity'] as num?)?.toInt() ?? 0;
-    final sellingPrice = (data['sellingPrice'] as num?)?.toDouble() ?? 0;
-    final calculatedTotalAmount = quantity * sellingPrice;
+    final quantity = data['quantity'] is num
+        ? (data['quantity'] as num).toInt()
+        : 0;
+    final sellingPrice = data['sellingPrice'] is num
+        ? (data['sellingPrice'] as num).toDouble()
+        : 0.0;
+    final double calculatedTotalAmount = quantity * sellingPrice;
     return SaleRecord(
-      id: data['id'] as String? ?? doc.id,
-      productId: data['productId'] as String? ?? '',
-      productName: data['productName'] as String? ?? '',
+      id: data['id'] is String ? data['id'] as String : doc.id,
+      ownerId: data['ownerId'] is String ? data['ownerId'] as String : '',
+      productId: data['productId'] is String ? data['productId'] as String : '',
+      productName: data['productName'] is String
+          ? data['productName'] as String
+          : '',
       quantity: quantity,
       sellingPrice: sellingPrice,
       totalAmount: calculatedTotalAmount.isFinite &&

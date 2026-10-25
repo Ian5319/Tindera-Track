@@ -28,42 +28,15 @@ class AuthRepository {
 
   Future<User> login(String identifier, String password) async {
     final normalizedIdentifier = identifier.trim().toLowerCase();
-
-    String email = normalizedIdentifier;
-
-    // If the user entered phone number or name,
-    // find the corresponding email in Firestore.
-    if (!normalizedIdentifier.contains('@')) {
-      final byPhone = await _firestore
-          .collection('users')
-          .where('phone', isEqualTo: normalizedIdentifier)
-          .limit(1)
-          .get();
-
-      if (byPhone.docs.isNotEmpty) {
-        email = (byPhone.docs.first.data()['email'] as String).toLowerCase();
-      } else {
-        final byName = await _firestore
-            .collection('users')
-            .where('nameLowercase', isEqualTo: normalizedIdentifier)
-            .limit(1)
-            .get();
-
-        if (byName.docs.isNotEmpty) {
-          email = (byName.docs.first.data()['email'] as String).toLowerCase();
-        } else if (normalizedIdentifier == 'rosita') {
-          email = 'rosita@example.com';
-        } else {
-          throw const AuthException(
-            'Incorrect username/phone or password/PIN.',
-          );
-        }
-      }
+    if (normalizedIdentifier.length > 320 ||
+        !RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
+            .hasMatch(normalizedIdentifier)) {
+      throw const AuthException('Enter a valid email and password.');
     }
 
     try {
       final credential = await _auth.signInWithEmailAndPassword(
-        email: email,
+        email: normalizedIdentifier,
         password: password,
       );
 
@@ -81,6 +54,7 @@ class AuthRepository {
           .get();
 
       if (!doc.exists || doc.data() == null) {
+        await _auth.signOut();
         throw const AuthException(
           'User profile was not found.',
         );
@@ -92,7 +66,7 @@ class AuthRepository {
           e.code == 'wrong-password' ||
           e.code == 'user-not-found') {
         throw const AuthException(
-          'Incorrect username/phone or password/PIN.',
+          'Incorrect email or password.',
         );
       }
 
@@ -109,6 +83,24 @@ class AuthRepository {
   }) async {
     final normalizedName = name.trim();
     final normalizedEmail = email.trim().toLowerCase();
+
+    if (normalizedName.isEmpty || normalizedName.length > 100) {
+      throw const AuthException('Enter a name of 100 characters or fewer.');
+    }
+    if (normalizedEmail.length > 320 ||
+        !RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
+            .hasMatch(normalizedEmail)) {
+      throw const AuthException('Enter a valid email address.');
+    }
+    if (password.length < 8 ||
+        password.length > 128 ||
+        !RegExp(r'[A-Za-z]').hasMatch(password) ||
+        !RegExp(r'\d').hasMatch(password) ||
+        !RegExp(r'[^A-Za-z0-9]').hasMatch(password)) {
+      throw const AuthException(
+        'Use 8+ characters with letters, numbers, and symbols.',
+      );
+    }
 
     try {
       final credential = await _auth.createUserWithEmailAndPassword(
@@ -132,18 +124,30 @@ class AuthRepository {
         storeName: '$normalizedName Store',
       );
 
-      await _firestore
-          .collection('users')
-          .doc(firebaseUser.uid)
-          .set({
-        'id': user.id,
-        'name': user.name,
-        'nameLowercase': user.name.toLowerCase(),
-        'email': user.email,
-        'phone': user.phone,
-        'storeName': user.storeName,
-        'createdAt': FieldValue.serverTimestamp(),
-      });
+      try {
+        await _firestore
+            .collection('users')
+            .doc(firebaseUser.uid)
+            .set({
+          'id': user.id,
+          'name': user.name,
+          'nameLowercase': user.name.toLowerCase(),
+          'email': user.email,
+          'phone': user.phone,
+          'storeName': user.storeName,
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+      } catch (_) {
+        // Do not leave an authenticated Firebase session without a profile.
+        try {
+          await _auth.signOut();
+        } catch (_) {
+          // The profile write failure is still the useful error to surface.
+        }
+        throw const AuthException(
+          'Unable to finish account setup. Please try again.',
+        );
+      }
 
       return user;
     } on firebase_auth.FirebaseAuthException catch (e) {
@@ -168,61 +172,23 @@ class AuthRepository {
   Future<void> sendPasswordReset(String identifier) async {
     final normalizedIdentifier = identifier.trim().toLowerCase();
 
-    if (normalizedIdentifier.isEmpty) {
+    if (normalizedIdentifier.isEmpty ||
+        normalizedIdentifier.length > 320 ||
+        !RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
+            .hasMatch(normalizedIdentifier)) {
       throw const AuthException(
-        'Enter the email, username, or phone number for your account.',
+        'Enter the email address for your account.',
       );
     }
 
     try {
-      var email = normalizedIdentifier;
-
-      if (!normalizedIdentifier.contains('@')) {
-        final byPhone = await _firestore
-            .collection('users')
-            .where('phone', isEqualTo: normalizedIdentifier)
-            .limit(1)
-            .get();
-
-        if (byPhone.docs.isNotEmpty) {
-          email = (byPhone.docs.first.data()['email'] as String?)
-                  ?.trim()
-                  .toLowerCase() ??
-              '';
-        } else {
-          final byName = await _firestore
-              .collection('users')
-              .where('nameLowercase', isEqualTo: normalizedIdentifier)
-              .limit(1)
-              .get();
-
-          if (byName.docs.isNotEmpty) {
-            email = (byName.docs.first.data()['email'] as String?)
-                    ?.trim()
-                    .toLowerCase() ??
-                '';
-          } else {
-            throw const AuthException(
-              'We could not find an account with that username or phone number.',
-            );
-          }
-        }
-      }
-
-      if (email.isEmpty) {
-        throw const AuthException(
-          'This account does not have a valid email address for password reset.',
-        );
-      }
-
-      await _auth.sendPasswordResetEmail(email: email);
+      await _auth.sendPasswordResetEmail(email: normalizedIdentifier);
     } on AuthException {
       rethrow;
     } on firebase_auth.FirebaseAuthException catch (e) {
       if (e.code == 'user-not-found' || e.code == 'invalid-email') {
-        throw const AuthException(
-          'We could not find an account with that email address.',
-        );
+        // Do not reveal whether an account exists.
+        return;
       }
 
       if (e.code == 'too-many-requests') {

@@ -4,11 +4,11 @@ TinderaTrack is a Material 3 Flutter MVP for sari-sari store owners, focused on 
 
 ## Implemented core journey
 
-1. Local login with auto-session and demo credentials.
+1. Firebase Authentication login with an email/password account.
 2. Create Account flow with password validation.
 3. Dashboard: today's sales, low-stock alerts, outstanding utang, quick actions.
 4. Inventory search/filter, low-stock highlighting, add/edit item flow with camera or gallery fallback.
-5. Utang recording with customer selector, live balance preview, required photo attachment, and Hive persistence.
+5. Utang recording with customer selector, live balance preview, and Firestore persistence.
 6. Customer balance/history with charge (+) and payment (-) indicators, plus fixed Record Payment action.
 7. Daily/Weekly reports with custom-painted bar chart, KPI cards, and top-selling products.
 8. Bottom navigation for Home, Inventory, Utang, and Reports.
@@ -16,19 +16,18 @@ TinderaTrack is a Material 3 Flutter MVP for sari-sari store owners, focused on 
 ## Storage and packages
 
 - Provider for state management
-- Hive + hive_flutter for local inventory, customer, transaction, user, and session data
+- Firebase Authentication and Cloud Firestore for account and store data
+- Firebase Storage for owner-scoped product photos
 - camera for product capture
-- image_picker for gallery and utang photo attachment
+- image_picker for gallery product photos
 - GoRouter for navigation
 - intl for Philippine Peso and date formatting
 - Material 3 styling with warm Filipino/market-inspired orange, green, and amber tones
 
-The local storage is intentionally MVP/demo-grade. Production deployment should add a real authentication backend, secure credential handling, encrypted storage, cloud photo sync, and robust offline conflict resolution.
-
-## Demo credentials
-
-Phone: `09171234567`
-PIN: `1234`
+No passwords, PINs, customer records, or business data are stored in Hive. Existing
+Firestore records created before owner isolation was added must be migrated by a
+trusted administrator to include the correct `ownerId` before deploying the new
+rules.
 
 ## Run on Android
 
@@ -37,14 +36,15 @@ PIN: `1234`
 3. Connect an Android emulator or device.
 4. Run `flutter run`.
 
-On the first Android run, grant camera permission when prompted. If an emulator has no usable camera, the Add Inventory screen exposes a gallery fallback so the end-to-end flow remains demonstrable.
+On the first Android or iOS camera use, grant camera permission when prompted. If an emulator has no usable camera, the Add Inventory screen exposes a gallery fallback so the end-to-end flow remains demonstrable.
 
 ## Deploy Firestore rules
 
 The payment-history screen reads `payment_records`, which is protected by the
-canonical `firestore.rules` file. After signing in with the Firebase CLI, run
-`firebase deploy --only firestore:rules` from this directory. The checked-in
-`.firebaserc` binds that command to the `tinderatrack-acf1a` project.
+canonical `firestore.rules` file. Product photos use the checked-in
+`storage.rules`. After signing in with the Firebase CLI, run
+`firebase deploy --only firestore:rules,storage` from this directory. The
+checked-in `.firebaserc` binds that command to the `tinderatrack-acf1a` project.
 
 ## Phase 1 note
 

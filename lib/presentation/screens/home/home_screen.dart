@@ -21,7 +21,7 @@ class HomeScreen extends StatelessWidget {
     final outstanding = payments.remainingOutstanding(utang.customers);
 
     return RefreshIndicator(onRefresh: () async { await Future.wait([inventory.load(), inventory.loadSales(), utang.load(), payments.load()]); }, child: ListView(padding: const EdgeInsets.fromLTRB(20, 18, 20, 28), children: [
-      Row(children: [Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Hello, ${user?.name.split(' ').first ?? 'Store Owner'} 👋', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900)), const SizedBox(height: 4), Text(user?.storeName ?? 'Your store', style: Theme.of(context).textTheme.bodyLarge)])), PopupMenuButton<String>(onSelected: (value) async { if (value == 'logout') { await context.read<AuthProvider>().logout(); } }, itemBuilder: (_) => const [PopupMenuItem(value: 'logout', child: Text('Log out'))], child: const CircleAvatar(child: Icon(Icons.person_outline)))]),
+      Row(children: [Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Hello, ${user?.name.split(' ').first ?? 'Store Owner'} 👋', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900)), const SizedBox(height: 4), Text(user?.storeName ?? 'Your store', style: Theme.of(context).textTheme.bodyLarge)]))]),
       const SizedBox(height: 24),
       _MetricCard(title: "Today's Sales", value: currencyFormatter.format(todaysSales), icon: Icons.point_of_sale_outlined),
       const SizedBox(height: 14),

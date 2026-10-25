@@ -6,54 +6,65 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function validPaymentDocument(paymentId) {
-      return request.resource.data.keys().hasOnly([
-          'id',
-          'customerId',
-          'customerName',
-          'utangId',
-          'amount',
-          'paymentDate',
-          'note',
-          'recordedBy',
-          'createdAt',
-          'updatedAt'
+    function owned(data) {
+      return signedIn()
+        && data.ownerId is string
+        && data.ownerId == request.auth.uid;
+    }
+
+    function ownedCustomer(customerId) {
+      return signedIn()
+        && exists(/databases/$(database)/documents/customers/$(customerId))
+        && get(/databases/$(database)/documents/customers/$(customerId)).data.ownerId
+            == request.auth.uid;
+    }
+
+    function validPayment(paymentId) {
+      let data = request.resource.data;
+      return data.keys().hasAll([
+          'id', 'ownerId', 'customerId', 'customerName', 'utangId', 'amount',
+          'paymentDate', 'note', 'recordedBy', 'createdAt', 'updatedAt'
         ])
-        && request.resource.data.id == paymentId
-        && request.resource.data.customerId is string
-        && request.resource.data.customerName is string
-        && (request.resource.data.utangId == null
-            || request.resource.data.utangId is string)
-        && request.resource.data.amount is number
-        && request.resource.data.amount > 0
-        && request.resource.data.paymentDate is timestamp
-        && (request.resource.data.note == null
-            || request.resource.data.note is string)
-        && request.resource.data.recordedBy is string
-        && request.resource.data.createdAt is timestamp
-        && request.resource.data.updatedAt is timestamp;
+        && data.keys().hasOnly([
+          'id', 'ownerId', 'customerId', 'customerName', 'utangId', 'amount',
+          'paymentDate', 'note', 'recordedBy', 'createdAt', 'updatedAt'
+        ])
+        && data.id == paymentId
+        && data.ownerId == request.auth.uid
+        && data.customerId is string
+        && data.customerId.size() > 0
+        && data.customerName is string
+        && data.customerName.size() > 0
+        && data.customerName.size() <= 200
+        && data.utangId == data.customerId
+        && data.amount is number
+        && data.amount > 0
+        && data.amount <= 1000000000000
+        && data.paymentDate is timestamp
+        && data.paymentDate <= request.time
+        && (data.note == null || (data.note is string && data.note.size() <= 2000))
+        && data.recordedBy == request.auth.uid
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp
+        && data.createdAt <= request.time
+        && data.updatedAt <= request.time;
     }
 
     match /payment_records/{paymentId} {
-      allow create: if signedIn() && validPaymentDocument(paymentId);
-      // This is an owner-only app: an authenticated owner may read the
-      // payment collection. There are no customer/staff roles to check.
-      // Keeping the read rule at the collection level also allows the
-      // idempotency transaction to check a not-yet-created document.
-      allow read: if signedIn();
-
-      allow update: if signedIn()
-        && validPaymentDocument(paymentId)
-        && request.resource.data.id == resource.data.id
+      allow read: if owned(resource.data);
+      allow create: if signedIn()
+        && validPayment(paymentId)
+        && ownedCustomer(request.resource.data.customerId);
+      allow update: if owned(resource.data)
+        && validPayment(paymentId)
+        && request.resource.data.ownerId == resource.data.ownerId
         && request.resource.data.customerId == resource.data.customerId
-        && request.resource.data.customerName == resource.data.customerName
         && request.resource.data.createdAt == resource.data.createdAt
-        && request.resource.data.recordedBy == resource.data.recordedBy;
-      allow delete: if signedIn();
+        && request.resource.data.recordedBy == resource.data.recordedBy
+        && ownedCustomer(request.resource.data.customerId);
+      allow delete: if owned(resource.data);
     }
 
-    // This is a dedicated payment-project rules file. Any collection other
-    // than payment_records is denied in the payment backend.
     match /{document=**} {
       allow read, write: if false;
     }

@@ -4,12 +4,28 @@ import '../models/payment_record.dart';
 import 'payment_data_source.dart';
 
 class FirestorePaymentDataSource implements PaymentDataSource {
-  FirestorePaymentDataSource({required FirebaseFirestore firestore})
+  FirestorePaymentDataSource({
+    required FirebaseFirestore firestore,
+    required String? Function() currentUserId,
+  })
       : _firestore = firestore,
-        _payments = firestore.collection('payment_records');
+        _payments = firestore.collection('payment_records'),
+        _currentUserId = currentUserId;
 
   final FirebaseFirestore _firestore;
   final CollectionReference<Map<String, dynamic>> _payments;
+  final String? Function() _currentUserId;
+
+  String get _ownerId {
+    final uid = _currentUserId()?.trim();
+    if (uid == null || uid.isEmpty) {
+      throw const PaymentDataSourceException(
+        code: 'unauthenticated',
+        message: 'An authenticated owner is required.',
+      );
+    }
+    return uid;
+  }
 
   @override
   Future<PaymentRecord> createPayment(PaymentRecord payment) async {
@@ -18,6 +34,7 @@ class FirestorePaymentDataSource implements PaymentDataSource {
         : _payments.doc(payment.id);
     final normalizedPayment = payment.copyWith(
       id: reference.id,
+      ownerId: _ownerId,
       utangId: payment.utangId ?? payment.customerId,
     );
 
@@ -82,6 +99,7 @@ class FirestorePaymentDataSource implements PaymentDataSource {
 
           final normalizedPayment = payment.copyWith(
             id: reference.id,
+            ownerId: existing.ownerId,
             customerId: existing.customerId,
             customerName: existing.customerName,
             utangId: existing.utangId ?? existing.customerId,
@@ -135,10 +153,11 @@ class FirestorePaymentDataSource implements PaymentDataSource {
   Future<List<PaymentRecord>> getPayments({
     required String customerId,
   }) async {
-    final payments = await getAllPayments();
-    final customerPayments = payments
-        .where((payment) => payment.customerId == customerId)
-        .toList();
+    final snapshot = await _payments
+        .where('ownerId', isEqualTo: _ownerId)
+        .where('customerId', isEqualTo: customerId)
+        .get();
+    final customerPayments = snapshot.docs.map(_fromSnapshot).toList();
 
     customerPayments.sort(
       (a, b) => b.paymentDate.compareTo(a.paymentDate),
@@ -149,7 +168,9 @@ class FirestorePaymentDataSource implements PaymentDataSource {
   @override
   Future<List<PaymentRecord>> getAllPayments() async {
     try {
-      final snapshot = await _payments.get();
+      final snapshot = await _payments
+          .where('ownerId', isEqualTo: _ownerId)
+          .get();
 
       final payments = snapshot.docs.map(_fromSnapshot).toList();
       payments.sort(
@@ -179,6 +200,7 @@ class FirestorePaymentDataSource implements PaymentDataSource {
 
   Map<String, dynamic> _toMap(PaymentRecord payment) => {
         'id': payment.id,
+        'ownerId': payment.ownerId,
         'customerId': payment.customerId,
         'customerName': payment.customerName,
         'utangId': payment.utangId,
@@ -198,14 +220,23 @@ class FirestorePaymentDataSource implements PaymentDataSource {
     final updatedAt = _dateFrom(data['updatedAt']) ?? createdAt;
 
     return PaymentRecord(
-      id: data['id'] as String? ?? snapshot.id,
-      customerId: data['customerId'] as String? ?? '',
-      customerName: data['customerName'] as String? ?? '',
-      utangId: data['utangId'] as String?,
-      amount: (data['amount'] as num?)?.toDouble() ?? 0,
+      id: data['id'] is String ? data['id'] as String : snapshot.id,
+      ownerId: data['ownerId'] is String ? data['ownerId'] as String : '',
+      customerId: data['customerId'] is String
+          ? data['customerId'] as String
+          : '',
+      customerName: data['customerName'] is String
+          ? data['customerName'] as String
+          : '',
+      utangId: data['utangId'] is String ? data['utangId'] as String : null,
+      amount: data['amount'] is num
+          ? (data['amount'] as num).toDouble()
+          : 0,
       paymentDate: _dateFrom(data['paymentDate']) ?? createdAt,
-      note: data['note'] as String?,
-      recordedBy: data['recordedBy'] as String? ?? '',
+      note: data['note'] is String ? data['note'] as String : null,
+      recordedBy: data['recordedBy'] is String
+          ? data['recordedBy'] as String
+          : '',
       createdAt: createdAt,
       updatedAt: updatedAt,
     );
@@ -218,6 +249,7 @@ class FirestorePaymentDataSource implements PaymentDataSource {
   }
 
   bool _matches(PaymentRecord first, PaymentRecord second) =>
+      first.ownerId == second.ownerId &&
       first.customerId == second.customerId &&
       first.recordedBy == second.recordedBy &&
       first.amount == second.amount &&

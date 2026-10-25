@@ -22,6 +22,8 @@ class InventoryProvider extends ChangeNotifier {
   bool _authenticated = false;
   int _authGeneration = 0;
   bool _disposed = false;
+  Future<void>? _loadFuture;
+  Future<void>? _salesLoadFuture;
 
   List<Product> get items => List.unmodifiable(_items);
 
@@ -96,6 +98,8 @@ class InventoryProvider extends ChangeNotifier {
       salesError = null;
       loading = false;
       salesLoading = false;
+      _loadFuture = null;
+      _salesLoadFuture = null;
       notifyListeners();
       return;
     }
@@ -178,10 +182,28 @@ class InventoryProvider extends ChangeNotifier {
     return values;
   }
 
-  Future<void> load() async {
-    if (!_authenticated) return;
+  Future<void> load() {
+    if (!_authenticated) return Future<void>.value();
 
-    final generation = _authGeneration;
+    final activeLoad = _loadFuture;
+    if (activeLoad != null) return activeLoad;
+
+    final loadFuture = _loadInternal(_authGeneration);
+    _loadFuture = loadFuture;
+    loadFuture.then<void>(
+      (_) {
+        if (identical(_loadFuture, loadFuture)) _loadFuture = null;
+      },
+      onError: (Object _, StackTrace __) {
+        if (identical(_loadFuture, loadFuture)) _loadFuture = null;
+      },
+    );
+    return loadFuture;
+  }
+
+  Future<void> _loadInternal(int generation) async {
+    if (!_authenticated || generation != _authGeneration || _disposed) return;
+
     loading = true;
     notifyListeners();
 
@@ -233,10 +255,28 @@ class InventoryProvider extends ChangeNotifier {
     return sale;
   }
 
-  Future<void> loadSales() async {
-    if (!_authenticated) return;
+  Future<void> loadSales() {
+    if (!_authenticated) return Future<void>.value();
 
-    final generation = _authGeneration;
+    final activeLoad = _salesLoadFuture;
+    if (activeLoad != null) return activeLoad;
+
+    final loadFuture = _loadSalesInternal(_authGeneration);
+    _salesLoadFuture = loadFuture;
+    loadFuture.then<void>(
+      (_) {
+        if (identical(_salesLoadFuture, loadFuture)) _salesLoadFuture = null;
+      },
+      onError: (Object _, StackTrace __) {
+        if (identical(_salesLoadFuture, loadFuture)) _salesLoadFuture = null;
+      },
+    );
+    return loadFuture;
+  }
+
+  Future<void> _loadSalesInternal(int generation) async {
+    if (!_authenticated || generation != _authGeneration || _disposed) return;
+
     salesLoading = true;
     notifyListeners();
     try {

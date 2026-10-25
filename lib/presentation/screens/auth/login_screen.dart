@@ -137,9 +137,10 @@ class _LoginScreenState extends State<LoginScreen> {
                   const SizedBox(height: 24),
                   TextFormField(
                     controller: _identifier,
-                    validator: Validators.phoneOrUsername,
+                    validator: Validators.email,
+                    keyboardType: TextInputType.emailAddress,
                     decoration: const InputDecoration(
-                      labelText: 'Username / phone number',
+                      labelText: 'Email address',
                       prefixIcon: Icon(
                         Icons.person_outline,
                       ),
@@ -151,7 +152,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     validator: Validators.password,
                     obscureText: _obscure,
                     decoration: InputDecoration(
-                      labelText: 'Password / PIN',
+                      labelText: 'Password',
                       prefixIcon: const Icon(
                         Icons.lock_outline,
                       ),
@@ -277,7 +278,7 @@ class _PasswordResetDialogState extends State<PasswordResetDialog> {
           },
           onFieldSubmitted: _sending ? null : (_) => _submit(),
           decoration: InputDecoration(
-            labelText: 'Email, username, or phone number',
+            labelText: 'Email address',
             hintText: 'name@example.com',
             prefixIcon: const Icon(Icons.alternate_email),
             errorText: _error,

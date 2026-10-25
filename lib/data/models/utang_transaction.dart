@@ -5,6 +5,7 @@ enum UtangType { credit, payment }
 class UtangTransaction {
   UtangTransaction({
     required this.id,
+    this.ownerId = '',
     required this.customerId,
     required this.amount,
     required this.type,
@@ -14,6 +15,7 @@ class UtangTransaction {
   });
 
   final String id;
+  final String ownerId;
   final String customerId;
   final double amount;
   final UtangType type;
@@ -31,6 +33,7 @@ class UtangTransactionAdapter extends TypeAdapter<UtangTransaction> {
     final map = Map<String, dynamic>.from(reader.readMap());
     return UtangTransaction(
       id: map['id'] as String,
+      ownerId: map['ownerId'] as String? ?? '',
       customerId: map['customerId'] as String,
       amount: (map['amount'] as num).toDouble(),
       type: UtangType.values[(map['type'] as num).toInt()],
@@ -44,6 +47,7 @@ class UtangTransactionAdapter extends TypeAdapter<UtangTransaction> {
   void write(BinaryWriter writer, UtangTransaction obj) {
     writer.writeMap({
       'id': obj.id,
+      'ownerId': obj.ownerId,
       'customerId': obj.customerId,
       'amount': obj.amount,
       'type': obj.type.index,

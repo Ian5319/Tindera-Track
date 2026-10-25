@@ -1,6 +1,7 @@
 class PaymentRecord {
   PaymentRecord({
     this.id = '',
+    this.ownerId = '',
     required this.customerId,
     required this.customerName,
     this.utangId,
@@ -13,6 +14,7 @@ class PaymentRecord {
   });
 
   final String id;
+  final String ownerId;
   final String customerId;
   final String customerName;
   /// The current data model has one aggregate utang balance per customer.
@@ -27,6 +29,7 @@ class PaymentRecord {
 
   PaymentRecord copyWith({
     String? id,
+    String? ownerId,
     String? customerId,
     String? customerName,
     String? utangId,
@@ -39,6 +42,7 @@ class PaymentRecord {
     DateTime? updatedAt,
   }) => PaymentRecord(
         id: id ?? this.id,
+        ownerId: ownerId ?? this.ownerId,
         customerId: customerId ?? this.customerId,
         customerName: customerName ?? this.customerName,
         utangId: utangId ?? this.utangId,

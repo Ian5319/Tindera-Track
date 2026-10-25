@@ -27,7 +27,10 @@ class PaymentService {
 
     return PaymentService(
       repository: PaymentRepository(
-        FirestorePaymentDataSource(firestore: firestore),
+        FirestorePaymentDataSource(
+          firestore: firestore,
+          currentUserId: () => auth.currentUser?.uid,
+        ),
       ),
       currentUserId: () => auth.currentUser?.uid,
     );
@@ -53,6 +56,7 @@ class PaymentService {
       amount: amount,
       outstandingBalance: outstandingBalance,
     );
+    _validateNoteAndDate(note, paymentDate);
 
     final paymentId = requestId ??
         'p_${DateTime.now().microsecondsSinceEpoch}';
@@ -62,6 +66,7 @@ class PaymentService {
     final now = DateTime.now();
     final payment = PaymentRecord(
       id: paymentId,
+      ownerId: _ownerId,
       customerId: customerId.trim(),
       customerName: customerName.trim(),
       utangId: customerId.trim(),
@@ -98,6 +103,7 @@ class PaymentService {
       amount: amount,
       outstandingBalance: outstandingBalance,
     );
+    _validateNoteAndDate(note, paymentDate);
 
     final updatedPayment = payment.copyWith(
       amount: amount,
@@ -146,8 +152,17 @@ class PaymentService {
   }
 
   String get _recordedBy {
+    return _ownerId;
+  }
+
+  String get _ownerId {
     final userId = _currentUserId()?.trim();
-    return userId == null || userId.isEmpty ? 'owner' : userId;
+    if (userId == null || userId.isEmpty) {
+      throw const PaymentAuthenticationException(
+        'Your Firebase session is not active. Please sign in again.',
+      );
+    }
+    return userId;
   }
 
   void _requireAuthenticated() {
@@ -175,6 +190,11 @@ class PaymentService {
         'Payment amount must be greater than zero.',
       );
     }
+    if (amount > 1000000000000) {
+      throw const PaymentValidationException(
+        'Payment amount is outside the allowed range.',
+      );
+    }
     if (outstandingBalance != null &&
         (!outstandingBalance.isFinite || outstandingBalance < 0)) {
       throw const PaymentValidationException(
@@ -184,6 +204,19 @@ class PaymentService {
     if (outstandingBalance != null && amount > outstandingBalance + 0.000001) {
       throw const PaymentValidationException(
         'Payment cannot be greater than the remaining balance.',
+      );
+    }
+  }
+
+  void _validateNoteAndDate(String? note, DateTime paymentDate) {
+    if (note != null && note.length > 2000) {
+      throw const PaymentValidationException(
+        'Payment notes must be 2,000 characters or fewer.',
+      );
+    }
+    if (paymentDate.isAfter(DateTime.now())) {
+      throw const PaymentValidationException(
+        'Payment date cannot be in the future.',
       );
     }
   }

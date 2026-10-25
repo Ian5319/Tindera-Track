@@ -1,6 +1,7 @@
 class SaleRecord {
   const SaleRecord({
     required this.id,
+    this.ownerId = '',
     required this.productId,
     required this.productName,
     required this.quantity,
@@ -10,6 +11,7 @@ class SaleRecord {
   });
 
   final String id;
+  final String ownerId;
   final String productId;
   final String productName;
   final int quantity;

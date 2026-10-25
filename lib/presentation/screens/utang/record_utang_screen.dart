@@ -1,12 +1,10 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/utils/validators.dart';
+import '../../../data/models/customer.dart';
 import '../../../data/models/utang_transaction.dart';
 import '../../providers/utang_provider.dart';
 import '../../widgets/common/custom_button.dart';
@@ -26,9 +24,7 @@ class _RecordUtangScreenState extends State<RecordUtangScreen> {
   final _amount = TextEditingController();
   final _note = TextEditingController();
 
-  final _picker = ImagePicker();
-
-  XFile? _photo;
+  Customer? _selectedCustomer;
   bool _saving = false;
 
   @override
@@ -40,26 +36,12 @@ class _RecordUtangScreenState extends State<RecordUtangScreen> {
     super.dispose();
   }
 
-  Future<void> _attachPhoto() async {
-    try {
-      final picked = await _picker.pickImage(source: ImageSource.camera);
-      if (picked != null && mounted) {
-        setState(() => _photo = picked);
-      }
-    } catch (_) {
-      try {
-        final picked = await _picker.pickImage(source: ImageSource.gallery);
-        if (picked != null && mounted) {
-          setState(() => _photo = picked);
-        }
-      } catch (_) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Could not attach a photo. Please check photo permissions and try again.')),
-          );
-        }
-      }
-    }
+  void _selectExistingCustomer(Customer selected) {
+    setState(() {
+      _selectedCustomer = selected;
+      _customerName.text = selected.name;
+      _phone.text = selected.phone;
+    });
   }
 
   double get amount {
@@ -76,17 +58,6 @@ class _RecordUtangScreenState extends State<RecordUtangScreen> {
       return;
     }
 
-    if (_photo == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Attach a photo as transaction proof.',
-          ),
-        ),
-      );
-      return;
-    }
-
     setState(() {
       _saving = true;
     });
@@ -94,8 +65,7 @@ class _RecordUtangScreenState extends State<RecordUtangScreen> {
     try {
       final provider = context.read<UtangProvider>();
 
-      // Create the customer manually from the entered information.
-      final customer = await provider.createCustomer(
+      final customer = _selectedCustomer ?? await provider.createCustomer(
         name: _customerName.text.trim(),
         phone: _phone.text.trim(),
       );
@@ -105,7 +75,6 @@ class _RecordUtangScreenState extends State<RecordUtangScreen> {
         customerId: customer.id,
         amount: amount,
         type: UtangType.credit,
-        photoUrl: _photo!.path,
         note: _note.text.trim().isEmpty
             ? null
             : _note.text.trim(),
@@ -123,7 +92,7 @@ class _RecordUtangScreenState extends State<RecordUtangScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
-            'Utang sale recorded and customer saved.',
+            'Utang sale recorded.',
           ),
         ),
       );
@@ -160,6 +129,11 @@ class _RecordUtangScreenState extends State<RecordUtangScreen> {
             TextFormField(
               controller: _customerName,
               textCapitalization: TextCapitalization.words,
+              onChanged: (_) {
+                if (_selectedCustomer != null) {
+                  setState(() => _selectedCustomer = null);
+                }
+              },
               validator: (value) {
                 if (value == null || value.trim().isEmpty) {
                   return 'Enter the customer name.';
@@ -167,11 +141,39 @@ class _RecordUtangScreenState extends State<RecordUtangScreen> {
 
                 return null;
               },
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'Customer name',
-                hintText: 'Who owes this utang?',
-                prefixIcon: Icon(
-                  Icons.person_outline,
+                hintText: 'Enter a new name or choose from the list',
+                suffixIcon: PopupMenuButton<Customer>(
+                  tooltip: 'Choose an existing customer',
+                  icon: const Icon(Icons.arrow_drop_down_circle_outlined),
+                  onSelected: _selectExistingCustomer,
+                  itemBuilder: (_) {
+                    final customers = context
+                        .read<UtangProvider>()
+                        .customers
+                        .toList();
+
+                    if (customers.isEmpty) {
+                      return const [
+                        PopupMenuItem<Customer>(
+                          enabled: false,
+                          child: Text('No existing customers yet'),
+                        ),
+                      ];
+                    }
+
+                    return customers
+                        .map(
+                          (customer) => PopupMenuItem<Customer>(
+                            value: customer,
+                            child: Text(
+                              '${customer.name} • ${currencyFormatter.format(customer.balance)}',
+                            ),
+                          ),
+                        )
+                        .toList();
+                  },
                 ),
               ),
             ),
@@ -181,6 +183,11 @@ class _RecordUtangScreenState extends State<RecordUtangScreen> {
             TextFormField(
               controller: _phone,
               keyboardType: TextInputType.phone,
+              onChanged: (_) {
+                if (_selectedCustomer != null) {
+                  setState(() => _selectedCustomer = null);
+                }
+              },
               decoration: const InputDecoration(
                 labelText: 'Phone number (optional)',
                 hintText: '09171234567',
@@ -287,71 +294,6 @@ class _RecordUtangScreenState extends State<RecordUtangScreen> {
                 hintText: 'What was purchased?',
               ),
             ),
-
-            const SizedBox(height: 16),
-
-            Card(
-              child: InkWell(
-                onTap: _attachPhoto,
-                borderRadius: BorderRadius.circular(20),
-                child: Padding(
-                  padding: const EdgeInsets.all(18),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 54,
-                        height: 54,
-                        decoration: BoxDecoration(
-                          color: AppColors.accent
-                              .withValues(alpha: .22),
-                          borderRadius:
-                              BorderRadius.circular(15),
-                        ),
-                        child: const Icon(
-                          Icons.camera_alt_outlined,
-                          color: AppColors.primary,
-                        ),
-                      ),
-
-                      const SizedBox(width: 14),
-
-                      const Expanded(
-                        child: Column(
-                          crossAxisAlignment:
-                              CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Attach Photo',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w800,
-                                fontSize: 16,
-                              ),
-                            ),
-                            SizedBox(height: 4),
-                            Text(
-                              'Photo proof is required for credit sales.',
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-
-            if (_photo != null) ...[
-              const SizedBox(height: 10),
-
-              ClipRRect(
-                borderRadius: BorderRadius.circular(18),
-                child: Image.file(
-                  File(_photo!.path),
-                  height: 180,
-                  fit: BoxFit.cover,
-                ),
-              ),
-            ],
 
             const SizedBox(height: 22),
 

@@ -10,7 +10,7 @@ class AuthProvider extends ChangeNotifier with WidgetsBindingObserver {
 
   AuthProvider(this._repository) {
     WidgetsBinding.instance.addObserver(this);
-    _loadCurrentUser();
+    _startWithLoginRequired();
   }
 
   final AuthRepository _repository;
@@ -26,13 +26,15 @@ class AuthProvider extends ChangeNotifier with WidgetsBindingObserver {
   bool get loading => _loading;
   String? get error => _error;
 
-  Future<void> _loadCurrentUser() async {
+  Future<void> _startWithLoginRequired() async {
     try {
-      _user = await _repository.currentUser();
-      if (_user != null) _startSessionTimer();
+      // Firebase persists its last session by default. Sign it out here so
+      // every app launch requires the user to log in again.
+      await _repository.logout();
     } catch (_) {
-      _user = null;
+      // The local provider still starts logged out if Firebase is offline.
     } finally {
+      _user = null;
       _loading = false;
       notifyListeners();
     }
@@ -85,11 +87,13 @@ class AuthProvider extends ChangeNotifier with WidgetsBindingObserver {
 
   Future<void> logout() async {
     _stopSessionTimer();
+    _user = null;
+    notifyListeners();
+
     try {
       await _repository.logout();
-    } finally {
-      _user = null;
-      notifyListeners();
+    } catch (_) {
+      // The local session is already cleared, even if Firebase sign-out fails.
     }
   }
 
@@ -151,13 +155,12 @@ class AuthProvider extends ChangeNotifier with WidgetsBindingObserver {
 
     _stopSessionTimer();
     _user = null;
+    notifyListeners();
 
     try {
       await _repository.logout();
     } catch (_) {
       // The local session is already cleared, even if Firebase sign-out fails.
-    } finally {
-      notifyListeners();
     }
   }
 

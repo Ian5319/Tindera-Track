@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/utils/formatters.dart';
@@ -28,9 +27,23 @@ class ProductListTile extends StatelessWidget {
   }
 
   Widget _thumb() {
-    if (product.photoUrl != null && File(product.photoUrl!).existsSync()) {
-      return ClipRRect(borderRadius: BorderRadius.circular(12), child: Image.file(File(product.photoUrl!), width: 52, height: 52, fit: BoxFit.cover));
+    final photoUrl = product.photoUrl;
+    if (photoUrl != null && photoUrl.startsWith('https://')) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Image.network(
+          photoUrl,
+          width: 52,
+          height: 52,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => _placeholder(),
+        ),
+      );
     }
+    return _placeholder();
+  }
+
+  Widget _placeholder() {
     return Container(width: 52, height: 52, decoration: BoxDecoration(color: AppColors.accent.withValues( alpha: .25), borderRadius: BorderRadius.circular(12)), child: const Icon(Icons.inventory_2_outlined));
   }
 }

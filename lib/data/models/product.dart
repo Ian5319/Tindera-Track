@@ -3,6 +3,7 @@ import 'package:hive/hive.dart';
 class Product {
   Product({
     required this.id,
+    this.ownerId = '',
     required this.name,
     required this.price,
     required this.stockQuantity,
@@ -12,6 +13,7 @@ class Product {
   });
 
   final String id;
+  final String ownerId;
   final String name;
   final double price;
   final int stockQuantity;
@@ -20,6 +22,7 @@ class Product {
   final DateTime createdAt;
 
   Product copyWith({
+    String? ownerId,
     String? name,
     double? price,
     int? stockQuantity,
@@ -27,6 +30,7 @@ class Product {
     int? threshold,
   }) => Product(
         id: id,
+        ownerId: ownerId ?? this.ownerId,
         name: name ?? this.name,
         price: price ?? this.price,
         stockQuantity: stockQuantity ?? this.stockQuantity,
@@ -47,6 +51,7 @@ class ProductAdapter extends TypeAdapter<Product> {
     final map = Map<String, dynamic>.from(reader.readMap());
     return Product(
       id: map['id'] as String,
+      ownerId: map['ownerId'] as String? ?? '',
       name: map['name'] as String,
       price: (map['price'] as num).toDouble(),
       stockQuantity: (map['stockQuantity'] as num).toInt(),
@@ -60,6 +65,7 @@ class ProductAdapter extends TypeAdapter<Product> {
   void write(BinaryWriter writer, Product obj) {
     writer.writeMap({
       'id': obj.id,
+      'ownerId': obj.ownerId,
       'name': obj.name,
       'price': obj.price,
       'stockQuantity': obj.stockQuantity,

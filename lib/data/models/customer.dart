@@ -3,6 +3,7 @@ import 'package:hive/hive.dart';
 class Customer {
   Customer({
     required this.id,
+    this.ownerId = '',
     required this.name,
     required this.phone,
     required this.balance,
@@ -10,13 +11,15 @@ class Customer {
   });
 
   final String id;
+  final String ownerId;
   final String name;
   final String phone;
   final double balance;
   final DateTime createdAt;
 
-  Customer copyWith({double? balance}) => Customer(
+  Customer copyWith({String? ownerId, double? balance}) => Customer(
         id: id,
+        ownerId: ownerId ?? this.ownerId,
         name: name,
         phone: phone,
         balance: balance ?? this.balance,
@@ -33,6 +36,7 @@ class CustomerAdapter extends TypeAdapter<Customer> {
     final map = Map<String, dynamic>.from(reader.readMap());
     return Customer(
       id: map['id'] as String,
+      ownerId: map['ownerId'] as String? ?? '',
       name: map['name'] as String,
       phone: map['phone'] as String,
       balance: (map['balance'] as num).toDouble(),
@@ -44,6 +48,7 @@ class CustomerAdapter extends TypeAdapter<Customer> {
   void write(BinaryWriter writer, Customer obj) {
     writer.writeMap({
       'id': obj.id,
+      'ownerId': obj.ownerId,
       'name': obj.name,
       'phone': obj.phone,
       'balance': obj.balance,

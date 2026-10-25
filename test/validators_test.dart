@@ -50,11 +50,11 @@ void main() {
   });
 
   group('text validators', () {
-    test('phone or username and password enforce minimum lengths', () {
+    test('legacy identifier and password enforce minimum lengths', () {
       expect(Validators.phoneOrUsername('abc'), isNotNull);
       expect(Validators.phoneOrUsername('user'), isNull);
-      expect(Validators.password('123'), isNotNull);
-      expect(Validators.password('1234'), isNull);
+      expect(Validators.password('1234567'), isNotNull);
+      expect(Validators.password('12345678'), isNull);
     });
 
     test('strong password requires letters, numbers, and symbols', () {

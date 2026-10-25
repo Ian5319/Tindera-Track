@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -290,8 +288,8 @@ class _ProductHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final hasImage =
-        product.photoUrl != null && File(product.photoUrl!).existsSync();
+    final photoUrl = product.photoUrl;
+    final hasImage = photoUrl != null && photoUrl.startsWith('https://');
     return Card(
       color: product.isLowStock ? AppColors.warningBg : Colors.white,
       child: Padding(
@@ -301,18 +299,14 @@ class _ProductHeader extends StatelessWidget {
             ClipRRect(
               borderRadius: BorderRadius.circular(14),
               child: hasImage
-                  ? Image.file(
-                      File(product.photoUrl!),
+                  ? Image.network(
+                      photoUrl,
                       width: 84,
                       height: 84,
                       fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => _placeholder(),
                     )
-                  : Container(
-                      width: 84,
-                      height: 84,
-                      color: AppColors.accent.withValues(alpha: .25),
-                      child: const Icon(Icons.inventory_2_outlined, size: 36),
-                    ),
+                  : _placeholder(),
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -346,4 +340,11 @@ class _ProductHeader extends StatelessWidget {
       ),
     );
   }
+
+  Widget _placeholder() => Container(
+        width: 84,
+        height: 84,
+        color: AppColors.accent.withValues(alpha: .25),
+        child: const Icon(Icons.inventory_2_outlined, size: 36),
+      );
 }

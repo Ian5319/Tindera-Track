@@ -41,7 +41,7 @@ class _SignupScreenState extends State<SignupScreen> {
       const SizedBox(height: 8),
       const Text('Keep it simple. You can start managing inventory and utang right away.'),
       const SizedBox(height: 24),
-      TextFormField(controller: _name, validator: (v) => Validators.requiredField(v, 'Full name'), decoration: const InputDecoration(labelText: 'Full name', helperText: 'Use your everyday store-owner name', prefixIcon: Icon(Icons.badge_outlined))),
+      TextFormField(controller: _name, maxLength: 100, validator: (v) => Validators.requiredField(v, 'Full name'), decoration: const InputDecoration(labelText: 'Full name', helperText: 'Use your everyday store-owner name', prefixIcon: Icon(Icons.badge_outlined))),
       const SizedBox(height: 16),
       TextFormField(controller: _email, validator: Validators.email, keyboardType: TextInputType.emailAddress, decoration: const InputDecoration(labelText: 'Email', helperText: 'Example: ate@example.com', prefixIcon: Icon(Icons.email_outlined))),
       const SizedBox(height: 16),

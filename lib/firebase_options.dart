@@ -70,6 +70,6 @@ class DefaultFirebaseOptions {
     projectId: 'tinderatrack-acf1a',
     storageBucket: 'tinderatrack-acf1a.firebasestorage.app',
     iosClientId: '414011992436-cf87diusenqhsh5jgu6d39i7qaj8huk8.apps.googleusercontent.com',
-    iosBundleId: 'com.tinderatrack.',
+    iosBundleId: 'com.tinderatrack.tenderatrack',
   );
 }

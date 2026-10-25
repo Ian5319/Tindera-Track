@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'dart:typed_data';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -8,6 +8,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/utils/validators.dart';
 import '../../../data/models/product.dart';
 import '../../../services/camera_service.dart';
+import '../../../services/media_storage_service.dart';
 import '../../providers/inventory_provider.dart';
 import '../../widgets/common/custom_button.dart';
 
@@ -24,8 +25,10 @@ class _AddInventoryItemScreenState extends State<AddInventoryItemScreen> {
   final _stock = TextEditingController();
   final _threshold = TextEditingController(text: '5');
   final _camera = CameraService();
+  final _mediaStorage = MediaStorageService();
   final _picker = ImagePicker();
   XFile? _captured;
+  Uint8List? _capturedBytes;
   bool _cameraLoading = true;
   String? _cameraError;
   bool _saving = false;
@@ -41,13 +44,22 @@ class _AddInventoryItemScreenState extends State<AddInventoryItemScreen> {
   }
 
   Future<void> _takePhoto() async {
-    try { final file = await _camera.takePhoto(); if (mounted) setState(() => _captured = file); } catch (_) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not capture the photo. Please try again.'))); }
+    try {
+      final file = await _camera.takePhoto();
+      final bytes = await file.readAsBytes();
+      if (mounted) setState(() { _captured = file; _capturedBytes = bytes; });
+    } catch (_) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not capture the photo. Please try again.')));
+    }
   }
 
   Future<void> _useGallery() async {
     try {
       final file = await _picker.pickImage(source: ImageSource.gallery);
-      if (file != null && mounted) setState(() => _captured = file);
+      if (file != null) {
+        final bytes = await file.readAsBytes();
+        if (mounted) setState(() { _captured = file; _capturedBytes = bytes; });
+      }
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -72,13 +84,20 @@ class _AddInventoryItemScreenState extends State<AddInventoryItemScreen> {
 
     setState(() => _saving = true);
     try {
+      final productId = 'p${DateTime.now().microsecondsSinceEpoch}';
+      final photoUrl = _captured == null
+          ? null
+          : await _mediaStorage.uploadProductPhoto(
+              productId: productId,
+              file: _captured!,
+            );
       final product = Product(
-        id: 'p${DateTime.now().microsecondsSinceEpoch}',
+        id: productId,
         name: _name.text.trim(),
         price: price,
         stockQuantity: stock,
         threshold: threshold,
-        photoUrl: _captured?.path,
+        photoUrl: photoUrl,
         createdAt: DateTime.now(),
       );
       await context.read<InventoryProvider>().saveProduct(product);
@@ -142,9 +161,9 @@ class _AddInventoryItemScreenState extends State<AddInventoryItemScreen> {
   Widget _cameraPane() {
     final controller = _camera.controller;
     Widget preview;
-    if (_captured != null && File(_captured!.path).existsSync()) {
+    if (_capturedBytes != null) {
       preview = Stack(fit: StackFit.expand, children: [
-        Image.file(File(_captured!.path), fit: BoxFit.cover),
+        Image.memory(_capturedBytes!, fit: BoxFit.cover),
         Positioned(left: 14, bottom: 14, child: FilledButton.tonalIcon(onPressed: _initCamera, icon: const Icon(Icons.refresh), label: const Text('Retake'))),
       ]);
     } else if (_cameraLoading) {

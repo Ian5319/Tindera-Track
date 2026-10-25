@@ -18,6 +18,7 @@ class UtangProvider extends ChangeNotifier {
   bool _authenticated = false;
   int _authGeneration = 0;
   bool _disposed = false;
+  Future<void>? _loadFuture;
 
   List<Customer> get customers => List.unmodifiable(_customers);
 
@@ -59,6 +60,7 @@ class UtangProvider extends ChangeNotifier {
       _transactions = [];
       error = null;
       loading = false;
+      _loadFuture = null;
       notifyListeners();
       return;
     }
@@ -71,17 +73,35 @@ class UtangProvider extends ChangeNotifier {
     }));
   }
 
-  Future<void> load() async {
-    if (!_authenticated) return;
+  Future<void> load() {
+    if (!_authenticated) return Future<void>.value();
 
-    final generation = _authGeneration;
+    final activeLoad = _loadFuture;
+    if (activeLoad != null) return activeLoad;
+
+    final loadFuture = _loadInternal(_authGeneration);
+    _loadFuture = loadFuture;
+    loadFuture.then<void>(
+      (_) {
+        if (identical(_loadFuture, loadFuture)) _loadFuture = null;
+      },
+      onError: (Object _, StackTrace __) {
+        if (identical(_loadFuture, loadFuture)) _loadFuture = null;
+      },
+    );
+    return loadFuture;
+  }
+
+  Future<void> _loadInternal(int generation) async {
+    if (!_authenticated || generation != _authGeneration || _disposed) return;
+
     loading = true;
     notifyListeners();
 
     try {
-      await _repo.recalculate();
-      final customers = await _repo.getCustomers();
-      final transactions = await _repo.getAllTransactions();
+      final data = await _repo.loadData();
+      final customers = data.customers;
+      final transactions = data.transactions;
       if (_authenticated && generation == _authGeneration) {
         _customers = customers;
         _transactions = transactions;

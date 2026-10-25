@@ -14,6 +14,7 @@ import '../screens/utang/customer_balance_screen.dart';
 import '../screens/utang/record_payment_screen.dart';
 import '../screens/utang/utang_list_screen.dart';
 import '../screens/reports/reports_screen.dart';
+import '../widgets/common/app_navigation_drawer.dart';
 import 'route_names.dart';
 
 class AppRouter {
@@ -95,6 +96,19 @@ class MainShell extends StatelessWidget {
   final Widget child;
   final String location;
 
+  String get title {
+    if (location.startsWith(RouteNames.inventory)) return 'Inventory';
+    if (location.startsWith(RouteNames.utang)) return 'Utang';
+    if (location.startsWith(RouteNames.reports)) return 'Reports';
+    return 'Dashboard';
+  }
+
+  bool get isTopLevelDestination =>
+      location == RouteNames.home ||
+      location == RouteNames.inventory ||
+      location == RouteNames.utang ||
+      location == RouteNames.reports;
+
   int get index {
     if (location.startsWith(RouteNames.inventory)) return 1;
     if (location.startsWith(RouteNames.utang)) return 2;
@@ -105,6 +119,19 @@ class MainShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: isTopLevelDestination
+          ? AppBar(
+              leading: Builder(
+                builder: (context) => IconButton(
+                  tooltip: 'Open navigation menu',
+                  icon: const Icon(Icons.menu_rounded),
+                  onPressed: () => Scaffold.of(context).openDrawer(),
+                ),
+              ),
+              title: Text(title),
+            )
+          : null,
+      drawer: AppNavigationDrawer(location: location),
       body: SafeArea(child: child),
       bottomNavigationBar: NavigationBar(
         selectedIndex: index,

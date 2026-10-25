@@ -16,9 +16,9 @@ class Validators {
   }
 
   static String? password(String? value) {
-    final required = requiredField(value, 'Password / PIN');
+    final required = requiredField(value, 'Password');
     if (required != null) return required;
-    if (value!.trim().length < 4) return 'Use at least 4 characters.';
+    if (value!.length < 8) return 'Use at least 8 characters.';
     return null;
   }
 
@@ -38,20 +38,16 @@ class Validators {
   static String? email(String? value) {
     final required = requiredField(value, 'Email');
     if (required != null) return required;
-    final ok = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(value!.trim());
-    return ok ? null : 'Enter a valid email address.';
+    final normalized = value!.trim();
+    final ok = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(normalized);
+    if (!ok || normalized.length > 320) {
+      return 'Enter a valid email address.';
+    }
+    return null;
   }
 
   static String? passwordResetIdentifier(String? value) {
-    final required = requiredField(value, 'Email / username / phone');
-    if (required != null) return required;
-
-    final input = value!.trim();
-    if (input.contains('@')) return email(input);
-    if (input.length < 4) {
-      return 'Enter a valid email, username, or phone number.';
-    }
-    return null;
+    return email(value);
   }
 
   static String? money(String? value) {
@@ -84,7 +80,9 @@ class Validators {
     final required = requiredField(value, label);
     if (required != null) return required;
     final parsed = int.tryParse(value!.trim());
-    if (parsed == null || parsed < 0) return '$label must be a whole number.';
+    if (parsed == null || parsed < 0 || parsed > 1000000000) {
+      return '$label must be a whole number within the allowed range.';
+    }
     return null;
   }
 }
