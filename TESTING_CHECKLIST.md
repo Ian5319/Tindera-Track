@@ -11,7 +11,9 @@ tests against the only production copy of store data.
 - [x] `git diff --check` reports no whitespace errors (verified 2026-10-26)
 - [x] `firebase.json`, platform JSON, and plist configuration parse correctly
       (verified 2026-10-26)
-- [ ] Firestore and Storage rules compile in the emulator or staging deployment
+- [x] Firestore rules compile and deploy successfully to `tinderatrack-acf1a`
+      (verified 2026-10-26)
+- [ ] Storage rules compile in the emulator or staging deployment
 
 ## Authentication and session
 
@@ -60,8 +62,8 @@ tests against the only production copy of store data.
 - [ ] Existing customer selection shows remaining balance after payments
 - [ ] New amount updates Balance after entry immediately
 - [ ] New customer name/phone limits are enforced
-- [ ] Utang can save with no photo, camera photo, and gallery photo
-- [ ] Photo evidence opens in the customer history viewer
+- [ ] Record Utang has no photo capture/gallery controls and saves successfully
+- [ ] Legacy photo evidence still opens in the customer history viewer
 - [ ] Utang charge increases gross customer balance
 - [ ] Customer history displays amount, date, note, and attachment state
 - [ ] Payment cannot exceed the remaining balance
@@ -91,7 +93,7 @@ tests against the only production copy of store data.
 - [ ] Unknown collections and Storage paths are denied
 - [ ] Extra fields, invalid types, negative amounts, oversized strings, and future
       timestamps are rejected where prohibited by rules
-- [ ] Product and Utang photo uploads reject disallowed type or size
+- [ ] Product photo uploads reject disallowed type or size
 - [ ] Sale/transaction immutable fields cannot be edited by the client
 - [ ] No password, PIN, service-account key, or private key exists in source/local data
 

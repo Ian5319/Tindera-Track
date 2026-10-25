@@ -1,7 +1,7 @@
 # TinderaTrack
 
 TinderaTrack is a Flutter application for sari-sari store owners. It combines
-inventory, cash-sale recording, customer Utang, payment history, photo evidence,
+inventory, cash-sale recording, customer Utang, payment history,
 and sales reporting in one Firebase-backed product.
 
 ## Product capabilities
@@ -9,8 +9,8 @@ and sales reporting in one Firebase-backed product.
 - Email/password account creation, login, reset, logout, and idle-session expiry
 - Owner-isolated inventory with product photos, stock adjustment, editing, deletion,
   low-stock alerts, sale recording, and per-product sales history
-- Customer Utang recording with live balance previews, optional photo evidence,
-  customer search, detailed history, and paid-customer cleanup
+- Customer Utang recording with live balance previews, customer search, detailed
+  history, and paid-customer cleanup
 - Payment creation, editing, deletion, partial-payment status, and duplicate-submit
   protection
 - Dashboard and daily/weekly sales reports backed by live store data

@@ -106,22 +106,15 @@ cleanup is attempted after the inventory record is removed.
 3. Review the current remaining balance. This includes earlier payments.
 4. Enter the new Utang amount. **Balance after entry** updates immediately.
 5. Add an optional note.
-6. Optionally take or choose a photo of the purchased items or written ledger entry.
-7. Select **Save Utang Sale**.
+6. Select **Save Utang Sale**.
 
-The new customer and Utang record are synchronized to Firebase. Attached photos use
-the same 5 MB and file-type restrictions as product photos.
+The new customer and Utang record are synchronized to Firebase.
 
 ### Find a customer
 
 Use **Search customers** to filter by customer name or phone number. Each customer
 card displays the remaining balance after payments. Select a customer to view the
 full Utang and payment history.
-
-### View photo evidence
-
-In the customer's Utang history, select the camera icon on a transaction. The photo
-opens in a zoomable viewer.
 
 ### Record a payment
 

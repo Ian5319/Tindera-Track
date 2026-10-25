@@ -19,17 +19,6 @@ class MediaStorageService {
         label: 'Product',
       );
 
-  Future<String> uploadUtangPhoto({
-    required String transactionId,
-    required XFile file,
-  }) =>
-      _uploadPhoto(
-        folder: 'utang',
-        recordId: transactionId,
-        file: file,
-        label: 'Utang',
-      );
-
   Future<String> _uploadPhoto({
     required String folder,
     required String recordId,

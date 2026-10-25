@@ -17,7 +17,8 @@ message until Firebase options are generated for those platforms.
 - GoRouter for guarded navigation
 - Firebase Authentication for email/password identity
 - Cloud Firestore for user, inventory, sales, customer, Utang, and payment records
-- Firebase Storage for owner-scoped product and Utang photos
+- Firebase Storage for owner-scoped product photos and compatible access to legacy
+  Utang attachments
 - camera and image_picker for image capture/selection
 - intl for Philippine Peso and date formatting
 
@@ -80,7 +81,7 @@ requests share one active network request.
 | `/inventory/add` | Product creation and photo upload |
 | `/inventory/product/:id` | Product editing, stock, sale, and history |
 | `/utang` | Customer search and outstanding balances |
-| `/utang/record` | New Utang entry and optional photo evidence |
+| `/utang/record` | New Utang entry |
 | `/utang/customer/:id` | Customer balance and complete history |
 | `/utang/customer/:id/payment` | Payment management |
 | `/reports` | Daily/weekly reports and product ranking |
