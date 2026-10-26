@@ -6,7 +6,8 @@ and sales reporting in one Firebase-backed product.
 
 ## Product capabilities
 
-- Username + email + password account creation and login, reset, logout, and
+- Username + email account creation; email-or-username login with password reset,
+  logout, and
   idle-session expiry
 - Owner-isolated inventory with product photos, stock adjustment, editing, deletion,
   low-stock alerts, sale recording, and per-product sales history

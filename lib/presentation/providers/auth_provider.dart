@@ -41,15 +41,14 @@ class AuthProvider extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   Future<void> login(
-    String username,
-    String email,
+    String identifier,
     String password,
   ) async {
     _setLoading(true);
     _error = null;
 
     try {
-      _user = await _repository.login(username, email, password);
+      _user = await _repository.login(identifier, password);
       _startSessionTimer();
     } catch (e) {
       _error = e.toString().replaceFirst('AuthException: ', '');

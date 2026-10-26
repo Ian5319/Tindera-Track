@@ -8,6 +8,23 @@ through Firebase and is visible only to the signed-in owner account.
 
 ## 2. Getting started
 
+### Get and install the Android APK
+
+The Android installer is generated at:
+
+`build/app/outputs/flutter-apk/app-debug.apk`
+
+To install it on an Android phone:
+
+1. Copy or download the APK to the phone.
+2. Open the APK from the Downloads or Files app.
+3. If prompted, allow that file manager or browser to install unknown apps.
+4. Select **Install**, then open TinderaTrack after installation completes.
+
+For a new build, run `flutter build apk --debug` from the project folder. The
+generated file is placed at the path above. Debug APKs are for testing; create a
+signed release APK before distributing the app publicly.
+
 ### Create an account
 
 1. Open TinderaTrack and select **Create Account**.
@@ -20,8 +37,8 @@ through Firebase and is visible only to the signed-in owner account.
 
 ### Log in
 
-1. Enter the registered username, email address, and password.
-2. Select **Log In**. The username must match the account profile for that email.
+1. Enter the registered email address or username, followed by the password.
+2. Select **Log In**. The field accepts either the account email or username.
 3. If the password is forgotten, select **Forgot Password?**, enter the account
    email, and follow the email instructions. For privacy, the reset dialog does not
    reveal whether an email is registered.

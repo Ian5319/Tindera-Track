@@ -58,8 +58,10 @@ requests share one active network request.
 
 ## 5. Authentication and session lifecycle
 
-- Login uses normalized email plus Firebase password authentication, then verifies
-  the supplied username against the authenticated profile.
+- Login accepts either a normalized email or username. Username login resolves an
+  exact lower-case key in the restricted `usernames` collection, then uses the
+  resolved email with Firebase password authentication.
+- Email login backfills the username lookup for compatible legacy accounts.
 - Sign-up requires 8–128 characters with letters, numbers, and a symbol.
 - The Firestore profile is created only under the authenticated UID.
 - If profile creation fails, the partial authenticated session is signed out.
@@ -101,6 +103,15 @@ UID. Dates are stored as Firestore timestamps.
 
 The user may read and update only their own profile. Identity fields and creation
 time are protected by rules.
+
+### `usernames/{usernameKey}`
+
+`uid`, `email`
+
+The document key is the lower-case username. Exact reads are allowed so a login
+can resolve a username before Firebase Authentication; list queries are disabled,
+and the document contains no store or customer data. Signup creates this document
+alongside the owner profile and rejects duplicate usernames.
 
 ### `products/{productId}`
 
@@ -166,6 +177,7 @@ The canonical rules are `firestore.rules` and `storage.rules`, referenced by
 - Referenced customer/product ownership checks
 - Immutable sale and Utang transaction history
 - Owner-only profile access, preventing public customer/account lookup
+- Exact username lookup only; no username collection listing or profile exposure
 - Email-only reset flow with reduced account enumeration
 - No passwords, PINs, customer records, or business records in local Hive storage
 

@@ -40,6 +40,13 @@ service cloud.firestore {
         && value.matches('^[A-Za-z0-9._-]+$');
     }
 
+    function validUsernameKey(value) {
+      return value is string
+        && value.size() >= 3
+        && value.size() <= 32
+        && value.matches('^[a-z0-9._-]+$');
+    }
+
     function validProduct(productId) {
       let data = request.resource.data;
       return data.keys().hasAll([
@@ -215,6 +222,29 @@ service cloud.firestore {
         && validText(request.resource.data.phone, 0, 32)
         && validText(request.resource.data.storeName, 1, 160)
         && request.resource.data.createdAt == resource.data.createdAt;
+      allow delete: if false;
+    }
+
+    // Only an exact username lookup is public. The lookup document contains
+    // no profile or store data, and list queries are disabled.
+    match /usernames/{usernameKey} {
+      allow get: if validUsernameKey(usernameKey);
+      allow list: if false;
+      allow create: if signedIn()
+        && validUsernameKey(usernameKey)
+        && request.resource.data.keys().hasAll(['uid', 'email'])
+        && request.resource.data.keys().hasOnly(['uid', 'email'])
+        && request.resource.data.uid == request.auth.uid
+        && validId(request.resource.data.uid)
+        && validText(request.resource.data.email, 3, 320)
+        && request.resource.data.email == request.auth.token.email;
+      allow update: if signedIn()
+        && validUsernameKey(usernameKey)
+        && request.resource.data.keys().hasAll(['uid', 'email'])
+        && request.resource.data.keys().hasOnly(['uid', 'email'])
+        && resource.data.uid == request.auth.uid
+        && request.resource.data.uid == resource.data.uid
+        && request.resource.data.email == resource.data.email;
       allow delete: if false;
     }
 

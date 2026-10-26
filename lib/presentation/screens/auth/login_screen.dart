@@ -17,16 +17,14 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _username = TextEditingController();
-  final _email = TextEditingController();
+  final _identifier = TextEditingController();
   final _password = TextEditingController();
 
   bool _obscure = true;
 
   @override
   void dispose() {
-    _username.dispose();
-    _email.dispose();
+    _identifier.dispose();
     _password.dispose();
     super.dispose();
   }
@@ -36,11 +34,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
     final auth = context.read<AuthProvider>();
 
-    await auth.login(
-      _username.text,
-      _email.text,
-      _password.text,
-    );
+    await auth.login(_identifier.text, _password.text);
 
     if (!mounted) return;
 
@@ -61,8 +55,9 @@ class _LoginScreenState extends State<LoginScreen> {
       context: context,
       barrierDismissible: false,
       builder: (_) => PasswordResetDialog(
-        initialValue:
-            _email.text.trim().contains('@') ? _email.text.trim() : '',
+        initialValue: _identifier.text.trim().contains('@')
+            ? _identifier.text.trim()
+            : '',
         sendPasswordReset: auth.sendPasswordReset,
       ),
     );
@@ -138,26 +133,15 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 24),
                   TextFormField(
-                    controller: _username,
-                    validator: Validators.loginUsername,
+                    controller: _identifier,
+                    validator: Validators.loginIdentifier,
                     autocorrect: false,
                     textCapitalization: TextCapitalization.none,
-                    decoration: const InputDecoration(
-                      labelText: 'Username',
-                      hintText: 'e.g. tindera_ana',
-                      prefixIcon: Icon(Icons.alternate_email),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: _email,
-                    validator: Validators.email,
                     keyboardType: TextInputType.emailAddress,
                     decoration: const InputDecoration(
-                      labelText: 'Email address',
-                      prefixIcon: Icon(
-                        Icons.person_outline,
-                      ),
+                      labelText: 'Email/username',
+                      hintText: 'name@example.com or tindera_ana',
+                      prefixIcon: Icon(Icons.alternate_email),
                     ),
                   ),
                   const SizedBox(height: 16),

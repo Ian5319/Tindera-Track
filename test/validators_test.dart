@@ -64,6 +64,13 @@ void main() {
       expect(Validators.loginUsername(''), isNotNull);
     });
 
+    test('login identifier accepts either email or username', () {
+      expect(Validators.loginIdentifier('ate@example.com'), isNull);
+      expect(Validators.loginIdentifier('tindera_ana'), isNull);
+      expect(Validators.loginIdentifier('not an identifier'), isNotNull);
+      expect(Validators.loginIdentifier(''), isNotNull);
+    });
+
     test('legacy identifier and password enforce minimum lengths', () {
       expect(Validators.phoneOrUsername('abc'), isNotNull);
       expect(Validators.phoneOrUsername('user'), isNull);

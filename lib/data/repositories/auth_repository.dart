@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 
@@ -25,20 +27,30 @@ class AuthRepository {
   }
 
   Future<User> login(
-    String username,
-    String email,
+    String identifier,
     String password,
   ) async {
-    final normalizedUsername = username.trim();
-    final normalizedEmail = email.trim().toLowerCase();
-    if (normalizedUsername.length < 3 ||
-        normalizedUsername.length > 100 ||
-        normalizedEmail.length > 320 ||
-        !RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(normalizedEmail)) {
-      throw const AuthException('Enter a valid username, email, and password.');
+    final normalizedIdentifier = identifier.trim();
+    final isEmail = normalizedIdentifier.contains('@');
+    final normalizedUsername = isEmail
+        ? null
+        : normalizedIdentifier.toLowerCase();
+
+    if (isEmail) {
+      if (normalizedIdentifier.length > 320 ||
+          !RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
+              .hasMatch(normalizedIdentifier)) {
+        throw const AuthException('Enter a valid email address or username.');
+      }
+    } else if (!RegExp(r'^[A-Za-z0-9._-]{3,32}$')
+        .hasMatch(normalizedIdentifier)) {
+      throw const AuthException('Enter a valid email address or username.');
     }
 
     try {
+      final normalizedEmail = isEmail
+          ? normalizedIdentifier.toLowerCase()
+          : await _emailForUsername(normalizedUsername!);
       final credential = await _auth.signInWithEmailAndPassword(
         email: normalizedEmail,
         password: password,
@@ -63,9 +75,16 @@ class AuthRepository {
       }
 
       final user = _userFromFirestore(doc);
-      if (user.name.toLowerCase() != normalizedUsername.toLowerCase()) {
+      if (normalizedUsername != null &&
+          user.name.toLowerCase() != normalizedUsername) {
         await _auth.signOut();
-        throw const AuthException('Username and email do not match.');
+        throw const AuthException('Incorrect email or username.');
+      }
+
+      if (normalizedUsername == null) {
+        // Backfill the lookup document for older accounts after a successful
+        // email login, so they can use username login later.
+        unawaited(_ensureUsernameLookup(user));
       }
 
       return user;
@@ -81,6 +100,15 @@ class AuthRepository {
       throw AuthException(
         e.message ?? 'Unable to sign in. Please try again.',
       );
+    } on FirebaseException {
+      try {
+        await _auth.signOut();
+      } catch (_) {
+        // Keep the original sign-in failure for the user.
+      }
+      throw const AuthException(
+        'Unable to reach the account service. Please try again.',
+      );
     }
   }
 
@@ -91,6 +119,7 @@ class AuthRepository {
   }) async {
     final normalizedUsername = username.trim();
     final normalizedEmail = email.trim().toLowerCase();
+    final usernameKey = normalizedUsername.toLowerCase();
 
     if (!RegExp(r'^[A-Za-z0-9._-]{3,32}$').hasMatch(normalizedUsername)) {
       throw const AuthException(
@@ -112,6 +141,14 @@ class AuthRepository {
     }
 
     try {
+      final usernameDoc = await _firestore
+          .collection('usernames')
+          .doc(usernameKey)
+          .get();
+      if (usernameDoc.exists) {
+        throw const AuthException('That username is already taken.');
+      }
+
       final credential = await _auth.createUserWithEmailAndPassword(
         email: normalizedEmail,
         password: password,
@@ -136,7 +173,8 @@ class AuthRepository {
       );
 
       try {
-        await _firestore.collection('users').doc(firebaseUser.uid).set({
+        final batch = _firestore.batch();
+        batch.set(_firestore.collection('users').doc(firebaseUser.uid), {
           'id': user.id,
           'name': user.name,
           'nameLowercase': user.name.toLowerCase(),
@@ -145,8 +183,18 @@ class AuthRepository {
           'storeName': user.storeName,
           'createdAt': FieldValue.serverTimestamp(),
         });
+        batch.set(_firestore.collection('usernames').doc(usernameKey), {
+          'uid': user.id,
+          'email': user.email,
+        });
+        await batch.commit();
       } catch (_) {
         // Do not leave an authenticated Firebase session without a profile.
+        try {
+          await firebaseUser.delete();
+        } catch (_) {
+          // Some providers may not allow deletion after a failed write.
+        }
         try {
           await _auth.signOut();
         } catch (_) {
@@ -222,6 +270,29 @@ class AuthRepository {
 
   Future<void> logout() async {
     await _auth.signOut();
+  }
+
+  Future<String> _emailForUsername(String username) async {
+    final doc = await _firestore.collection('usernames').doc(username).get();
+    final email = doc.data()?['email'];
+    if (email is! String || email.trim().isEmpty) {
+      throw const AuthException('Incorrect email or username.');
+    }
+    return email.trim().toLowerCase();
+  }
+
+  Future<void> _ensureUsernameLookup(User user) async {
+    final username = user.name.trim().toLowerCase();
+    if (!RegExp(r'^[a-z0-9._-]{3,32}$').hasMatch(username)) return;
+
+    try {
+      await _firestore.collection('usernames').doc(username).set({
+        'uid': user.id,
+        'email': user.email,
+      }, SetOptions(merge: true));
+    } catch (_) {
+      // Email login remains successful if legacy lookup backfill is denied.
+    }
   }
 
   User _userFromFirestore(

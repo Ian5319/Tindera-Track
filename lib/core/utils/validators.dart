@@ -31,6 +31,22 @@ class Validators {
     return null;
   }
 
+  static String? loginIdentifier(String? value) {
+    final required = requiredField(value, 'Email/username');
+    if (required != null) return required;
+
+    final normalized = value!.trim();
+    if (normalized.contains('@')) {
+      return email(normalized);
+    }
+
+    if (!RegExp(r'^[A-Za-z0-9._-]{3,32}$').hasMatch(normalized)) {
+      return 'Enter a valid email address or username.';
+    }
+
+    return null;
+  }
+
   static String? phoneOrUsername(String? value) {
     final required = requiredField(value, 'Username / phone');
     if (required != null) return required;
