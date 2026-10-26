@@ -243,7 +243,14 @@ service cloud.firestore {
     }
 
     match /payment_records/{paymentId} {
-      allow read: if owned(resource.data);
+      // The client checks a newly generated id inside a transaction before
+      // creating the record. A missing document contains no private data, so
+      // allow authenticated existence checks while keeping existing records
+      // owner-scoped.
+      allow get: if signedIn()
+        && (!exists(/databases/$(database)/documents/payment_records/$(paymentId))
+            || owned(resource.data));
+      allow list: if owned(resource.data);
       allow create: if signedIn()
         && validPayment(paymentId)
         && ownedCustomer(request.resource.data.customerId);
