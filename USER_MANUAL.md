@@ -11,7 +11,8 @@ through Firebase and is visible only to the signed-in owner account.
 ### Create an account
 
 1. Open TinderaTrack and select **Create Account**.
-2. Enter the owner name and a valid email address.
+2. Enter a username and a valid email address. The username must be 3–32 characters
+   using letters, numbers, dots, underscores, or hyphens.
 3. Create a password with at least eight characters containing letters, numbers,
    and a symbol.
 4. Select **Create Account**. The app creates the owner profile and opens the

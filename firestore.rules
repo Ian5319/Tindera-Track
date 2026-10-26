@@ -33,6 +33,13 @@ service cloud.firestore {
           && value.matches('https://.*'));
     }
 
+    function validUsername(value) {
+      return value is string
+        && value.size() >= 3
+        && value.size() <= 32
+        && value.matches('^[A-Za-z0-9._-]+$');
+    }
+
     function validProduct(productId) {
       let data = request.resource.data;
       return data.keys().hasAll([
@@ -186,7 +193,7 @@ service cloud.firestore {
           'id', 'name', 'nameLowercase', 'email', 'phone', 'storeName', 'createdAt'
         ])
         && request.resource.data.id == userId
-        && validText(request.resource.data.name, 1, 100)
+        && validUsername(request.resource.data.name)
         && validText(request.resource.data.nameLowercase, 1, 100)
         && validText(request.resource.data.email, 3, 320)
         && request.resource.data.email == request.auth.token.email
@@ -202,7 +209,7 @@ service cloud.firestore {
           'id', 'name', 'nameLowercase', 'email', 'phone', 'storeName', 'createdAt'
         ])
         && request.resource.data.id == resource.data.id
-        && validText(request.resource.data.name, 1, 100)
+        && validUsername(request.resource.data.name)
         && validText(request.resource.data.nameLowercase, 1, 100)
         && request.resource.data.email == resource.data.email
         && validText(request.resource.data.phone, 0, 32)

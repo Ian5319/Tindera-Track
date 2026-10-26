@@ -95,7 +95,8 @@ UID. Dates are stored as Firestore timestamps.
 
 ### `users/{uid}`
 
-`id`, `name`, `nameLowercase`, `email`, `phone`, `storeName`, `createdAt`
+`id`, `name` (the account username), `nameLowercase`, `email`, `phone`, `storeName`,
+`createdAt`
 
 The user may read and update only their own profile. Identity fields and creation
 time are protected by rules.

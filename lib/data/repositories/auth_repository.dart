@@ -14,10 +14,8 @@ class AuthRepository {
       return null;
     }
 
-    final doc = await _firestore
-        .collection('users')
-        .doc(firebaseUser.uid)
-        .get();
+    final doc =
+        await _firestore.collection('users').doc(firebaseUser.uid).get();
 
     if (!doc.exists || doc.data() == null) {
       return null;
@@ -29,8 +27,7 @@ class AuthRepository {
   Future<User> login(String identifier, String password) async {
     final normalizedIdentifier = identifier.trim().toLowerCase();
     if (normalizedIdentifier.length > 320 ||
-        !RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
-            .hasMatch(normalizedIdentifier)) {
+        !RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(normalizedIdentifier)) {
       throw const AuthException('Enter a valid email and password.');
     }
 
@@ -48,10 +45,8 @@ class AuthRepository {
         );
       }
 
-      final doc = await _firestore
-          .collection('users')
-          .doc(firebaseUser.uid)
-          .get();
+      final doc =
+          await _firestore.collection('users').doc(firebaseUser.uid).get();
 
       if (!doc.exists || doc.data() == null) {
         await _auth.signOut();
@@ -77,19 +72,20 @@ class AuthRepository {
   }
 
   Future<User> signUp({
-    required String name,
+    required String username,
     required String email,
     required String password,
   }) async {
-    final normalizedName = name.trim();
+    final normalizedUsername = username.trim();
     final normalizedEmail = email.trim().toLowerCase();
 
-    if (normalizedName.isEmpty || normalizedName.length > 100) {
-      throw const AuthException('Enter a name of 100 characters or fewer.');
+    if (!RegExp(r'^[A-Za-z0-9._-]{3,32}$').hasMatch(normalizedUsername)) {
+      throw const AuthException(
+        'Use a username with 3–32 letters, numbers, dots, underscores, or hyphens.',
+      );
     }
     if (normalizedEmail.length > 320 ||
-        !RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
-            .hasMatch(normalizedEmail)) {
+        !RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(normalizedEmail)) {
       throw const AuthException('Enter a valid email address.');
     }
     if (password.length < 8 ||
@@ -118,17 +114,16 @@ class AuthRepository {
 
       final user = User(
         id: firebaseUser.uid,
-        name: normalizedName,
+        // Keep the existing profile field for compatibility; it now stores
+        // the required username entered during account creation.
+        name: normalizedUsername,
         email: normalizedEmail,
         phone: '',
-        storeName: '$normalizedName Store',
+        storeName: '$normalizedUsername Store',
       );
 
       try {
-        await _firestore
-            .collection('users')
-            .doc(firebaseUser.uid)
-            .set({
+        await _firestore.collection('users').doc(firebaseUser.uid).set({
           'id': user.id,
           'name': user.name,
           'nameLowercase': user.name.toLowerCase(),
@@ -174,8 +169,7 @@ class AuthRepository {
 
     if (normalizedIdentifier.isEmpty ||
         normalizedIdentifier.length > 320 ||
-        !RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
-            .hasMatch(normalizedIdentifier)) {
+        !RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(normalizedIdentifier)) {
       throw const AuthException(
         'Enter the email address for your account.',
       );

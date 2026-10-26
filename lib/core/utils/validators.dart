@@ -8,10 +8,25 @@ class Validators {
     return null;
   }
 
+  static String? username(String? value) {
+    final required = requiredField(value, 'Username');
+    if (required != null) return required;
+    final normalized = value!.trim();
+    if (normalized.length < 3 || normalized.length > 32) {
+      return 'Username must be 3 to 32 characters.';
+    }
+    if (!RegExp(r'^[A-Za-z0-9._-]+$').hasMatch(normalized)) {
+      return 'Use only letters, numbers, dots, underscores, or hyphens.';
+    }
+    return null;
+  }
+
   static String? phoneOrUsername(String? value) {
     final required = requiredField(value, 'Username / phone');
     if (required != null) return required;
-    if (value!.trim().length < 4) return 'Enter a valid username or phone number.';
+    if (value!.trim().length < 4) {
+      return 'Enter a valid username or phone number.';
+    }
     return null;
   }
 
@@ -69,9 +84,7 @@ class Validators {
     if (!validFormat.hasMatch(input)) return null;
 
     final parsed = double.tryParse(input.replaceAll(',', ''));
-    return parsed != null &&
-            parsed.isFinite &&
-            parsed <= maxMoney
+    return parsed != null && parsed.isFinite && parsed <= maxMoney
         ? parsed
         : null;
   }

@@ -55,7 +55,7 @@ class AuthProvider extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   Future<void> signUp(
-    String name,
+    String username,
     String email,
     String password,
   ) async {
@@ -64,7 +64,7 @@ class AuthProvider extends ChangeNotifier with WidgetsBindingObserver {
 
     try {
       _user = await _repository.signUp(
-        name: name,
+        username: username,
         email: email,
         password: password,
       );
