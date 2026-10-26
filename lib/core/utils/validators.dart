@@ -21,6 +21,16 @@ class Validators {
     return null;
   }
 
+  static String? loginUsername(String? value) {
+    final required = requiredField(value, 'Username');
+    if (required != null) return required;
+    final normalized = value!.trim();
+    if (normalized.length < 3 || normalized.length > 100) {
+      return 'Enter your username.';
+    }
+    return null;
+  }
+
   static String? phoneOrUsername(String? value) {
     final required = requiredField(value, 'Username / phone');
     if (required != null) return required;

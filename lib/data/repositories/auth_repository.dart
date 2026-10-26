@@ -24,16 +24,23 @@ class AuthRepository {
     return _userFromFirestore(doc);
   }
 
-  Future<User> login(String identifier, String password) async {
-    final normalizedIdentifier = identifier.trim().toLowerCase();
-    if (normalizedIdentifier.length > 320 ||
-        !RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(normalizedIdentifier)) {
-      throw const AuthException('Enter a valid email and password.');
+  Future<User> login(
+    String username,
+    String email,
+    String password,
+  ) async {
+    final normalizedUsername = username.trim();
+    final normalizedEmail = email.trim().toLowerCase();
+    if (normalizedUsername.length < 3 ||
+        normalizedUsername.length > 100 ||
+        normalizedEmail.length > 320 ||
+        !RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(normalizedEmail)) {
+      throw const AuthException('Enter a valid username, email, and password.');
     }
 
     try {
       final credential = await _auth.signInWithEmailAndPassword(
-        email: normalizedIdentifier,
+        email: normalizedEmail,
         password: password,
       );
 
@@ -55,7 +62,13 @@ class AuthRepository {
         );
       }
 
-      return _userFromFirestore(doc);
+      final user = _userFromFirestore(doc);
+      if (user.name.toLowerCase() != normalizedUsername.toLowerCase()) {
+        await _auth.signOut();
+        throw const AuthException('Username and email do not match.');
+      }
+
+      return user;
     } on firebase_auth.FirebaseAuthException catch (e) {
       if (e.code == 'invalid-credential' ||
           e.code == 'wrong-password' ||

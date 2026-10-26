@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-import '../../../core/constants/app_colors.dart';
 import '../../../core/utils/validators.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/common/custom_button.dart';
@@ -115,14 +114,6 @@ class _SignupScreenState extends State<SignupScreen> {
                                       child: const Text(
                                           'Already have an account? Sign In'))),
                               const SizedBox(height: 18),
-                              Container(
-                                  width: double.infinity,
-                                  padding: const EdgeInsets.all(14),
-                                  decoration: BoxDecoration(
-                                      color: AppColors.successBg,
-                                      borderRadius: BorderRadius.circular(16)),
-                                  child: const Text(
-                                      'Your account is secured with Firebase Authentication. Keep your password private.')),
                             ]))))));
   }
 }

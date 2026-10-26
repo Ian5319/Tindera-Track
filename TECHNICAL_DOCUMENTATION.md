@@ -58,7 +58,8 @@ requests share one active network request.
 
 ## 5. Authentication and session lifecycle
 
-- Login uses normalized email plus Firebase password authentication.
+- Login uses normalized email plus Firebase password authentication, then verifies
+  the supplied username against the authenticated profile.
 - Sign-up requires 8–128 characters with letters, numbers, and a symbol.
 - The Firestore profile is created only under the authenticated UID.
 - If profile creation fails, the partial authenticated session is signed out.

@@ -59,6 +59,11 @@ void main() {
       expect(Validators.username('tindera_ana'), isNull);
     });
 
+    test('login username accepts existing profile values', () {
+      expect(Validators.loginUsername('Ana Santos'), isNull);
+      expect(Validators.loginUsername(''), isNotNull);
+    });
+
     test('legacy identifier and password enforce minimum lengths', () {
       expect(Validators.phoneOrUsername('abc'), isNotNull);
       expect(Validators.phoneOrUsername('user'), isNull);

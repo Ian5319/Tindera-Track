@@ -20,8 +20,8 @@ through Firebase and is visible only to the signed-in owner account.
 
 ### Log in
 
-1. Enter the registered email address and password.
-2. Select **Log In**.
+1. Enter the registered username, email address, and password.
+2. Select **Log In**. The username must match the account profile for that email.
 3. If the password is forgotten, select **Forgot Password?**, enter the account
    email, and follow the email instructions. For privacy, the reset dialog does not
    reveal whether an email is registered.

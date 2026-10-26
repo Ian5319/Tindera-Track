@@ -6,7 +6,8 @@ and sales reporting in one Firebase-backed product.
 
 ## Product capabilities
 
-- Email/password account creation, login, reset, logout, and idle-session expiry
+- Username + email + password account creation and login, reset, logout, and
+  idle-session expiry
 - Owner-isolated inventory with product photos, stock adjustment, editing, deletion,
   low-stock alerts, sale recording, and per-product sales history
 - Customer Utang recording with live balance previews, customer search, detailed
