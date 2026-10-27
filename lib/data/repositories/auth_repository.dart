@@ -222,6 +222,16 @@ class AuthRepository {
       throw AuthException(
         e.message ?? 'Unable to create account.',
       );
+    } on FirebaseException catch (e) {
+      if (e.code == 'permission-denied') {
+        throw const AuthException(
+          'Account setup is temporarily unavailable. Please try again.',
+        );
+      }
+
+      throw const AuthException(
+        'Unable to reach the account service. Please try again.',
+      );
     }
   }
 
