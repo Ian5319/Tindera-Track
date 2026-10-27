@@ -1,0 +1,28 @@
+[debug] [2026-10-27T14:14:45.419Z] ----------------------------------------------------------------------
+[debug] [2026-10-27T14:14:45.441Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\admin\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js login:list --debug
+[debug] [2026-10-27T14:14:45.445Z] CLI Version:   15.30.2
+[debug] [2026-10-27T14:14:45.452Z] Platform:      win32
+[debug] [2026-10-27T14:14:45.465Z] Node Version:  v25.8.2
+[debug] [2026-10-27T14:14:45.470Z] Detected Agent: codex_cli
+[debug] [2026-10-27T14:14:45.473Z] Time:          Tue Oct 27 2026 22:14:45 GMT+0800 (Philippine Standard Time)
+[debug] [2026-10-27T14:14:45.478Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-10-27T14:14:47.151Z] Object "" in "firebase.json" has unknown property: {"additionalProperty":"flutter"}
+[info] Logged in as iandelatorre924@gmail.com
+[debug] [2026-10-27T14:15:21.440Z] ----------------------------------------------------------------------
+[debug] [2026-10-27T14:15:21.486Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\admin\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js help firestore:rules --debug
+[debug] [2026-10-27T14:15:21.488Z] CLI Version:   15.30.2
+[debug] [2026-10-27T14:15:21.492Z] Platform:      win32
+[debug] [2026-10-27T14:15:21.496Z] Node Version:  v25.8.2
+[debug] [2026-10-27T14:15:21.509Z] Detected Agent: codex_cli
+[debug] [2026-10-27T14:15:21.510Z] Time:          Tue Oct 27 2026 22:15:21 GMT+0800 (Philippine Standard Time)
+[debug] [2026-10-27T14:15:21.515Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-10-27T14:16:17.695Z] Object "" in "firebase.json" has unknown property: {"additionalProperty":"flutter"}
+[warn] 
+[warn] !  firestore:rules is not a valid command. See below for valid commands 
+[info] 
+[info] To see more about a specific namespace or command, run:
+[info]   firebase <namespace|command> --help
+[info]  Privacy Policy: https://firebase.google.com/support/privacy
+[info] 
